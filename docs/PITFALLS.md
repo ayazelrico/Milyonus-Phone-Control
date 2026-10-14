@@ -135,6 +135,14 @@
 - **Çözüm:** Testte `locksettings set-disabled false`, gecikmeyi 0 yap, uyut, ≥ 7 sn bekle, keyguard'ı yokla; sonra eski değerleri geri yükle. Gerçek telefonlarda bu ayarlara dokunulmaz.
 - **Test:** `tests/e2e_emulator/test_android_e2e.py::test_locked_phone_refuses_and_sends_no_touch`.
 
+## OCR
+
+### ocr-comma-below
+- **Belirti:** OCR'ın okuduğu "titreşim" ekrandakiyle aynı görünüyor ama `tap_text("titreşim", exact=True)` bulamıyor.
+- **Neden:** Apple Vision Türkçe **ş** (U+015F, çengelli) harfini Romence **ș** (U+0219, virgüllü) olarak okudu (rendered "Ses ve titreşim"). Ayrıca "Ağ" → "Ag" (breve kaçtı).
+- **Çözüm:** Her OCR kutusu `ocr.normalize_text` ile ș→ş, Ș→Ş, ț→ţ'ye çevrilir. Kaçan aksanları `textnorm.match` 4. seviyesi (aksansız) tolere eder.
+- **Test:** `tests/unit/test_ocr_registry.py::test_comma_below_lookalikes_become_turkish`, `tests/unit/ocr/test_vision.py`.
+
 ## iOS — iPhone Mirroring
 
 ### ios-video-stream

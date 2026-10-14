@@ -261,6 +261,7 @@ def test_idle_state_falls_back_to_pixels_and_backs_off(
     adb = ScriptedAdb(tree="ERROR: could not get idle state.\n")
     d = make(adb)
     monkeypatch.setattr(ocr, "_FACTORIES", {"rapidocr": StubOcr})
+    monkeypatch.setattr(ocr, "_load_entry_points", lambda: None)  # keep real engines out
     png = tmp_path / "x.png"
     from PIL import Image
 
