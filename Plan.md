@@ -1326,7 +1326,7 @@ sudo systemctl enable --now mphone-node
 ### 13.5 Sürümleme ve yayın
 
 - Monorepo, `uv` workspace; Python paketleri birlikte sürümlenir (`mphone==X.Y.Z`). Protokol sürümü ayrı (`1.0`).
-- PyPI yerine **özel paket deposu** (GitHub Packages / Artifactory / özel PyPI) — açık kaynak yapma kararı açık soru.
+- Repo public, lisans **Apache-2.0** (docs/decisions.md Q9). Dağıtım: GitHub Releases (wheel'ler) + `uv tool install "git+https://github.com/ayazelrico/Milyonus-Phone-Control#subdirectory=packages/mphone-cli"`; PyPI, paket adı uygunluğu doğrulanınca eklenir.
 - Companion APK: imzalı, GitHub Releases (özel) + MDM.
 - Değişiklik günlüğü: `CHANGELOG.md` (Keep a Changelog), Conventional Commits.
 
@@ -1389,7 +1389,7 @@ sudo systemctl enable --now mphone-node
 | Q6 | Barındırma: Milyonus'un mevcut bulutu (AWS/GCP/Azure/yerel)? Veri yerleşimi şartı? | AWS eu-central-1 veya Türkiye'de yerel sağlayıcı | Helm/terraform şablonları |
 | Q7 | Kimlik sağlayıcı (SSO)? | Google Workspace OIDC | Dashboard auth |
 | Q8 | Onay bildirimleri nereye: Slack, Teams, e-posta, WhatsApp? | Slack + dashboard | Webhook entegrasyonu |
-| Q9 | Açık kaynak mı, kapalı mı? | Kapalı (özel repo) | Lisans, paket deposu |
+| Q9 | Açık kaynak mı, kapalı mı? | **Karar: public repo, Apache-2.0** (docs/decisions.md) | Lisans, paket deposu |
 | Q10 | Apple Developer hesabı var mı (WDA için)? | Yok → P8 opsiyonel | P8 başlangıcı |
 | Q11 | Agent güven seviyeleri ve onaylayacak operatörler kimler? | 2 operatör, mesai saatleri | Onay SLA'sı, 7/24 ise nöbet |
 | Q12 | Run kodu ve ekran görüntülerinin saklama süresi? | 30 gün görüntü, 1 yıl meta | Depolama maliyeti, KVKK |

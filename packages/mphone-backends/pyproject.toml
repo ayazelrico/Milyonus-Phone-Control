@@ -3,7 +3,7 @@ name = "mphone-backends"
 version = "0.1.0"
 description = "Device backends: android_adb, ios_mirroring, ios_wda, remote, fake."
 requires-python = ">=3.12"
-license = { text = "Proprietary" }
+license = "Apache-2.0"
 dependencies = ["mphone-core", "pyyaml>=6.0", "pillow>=10.4"]
 
 [project.entry-points."mphone.backends"]

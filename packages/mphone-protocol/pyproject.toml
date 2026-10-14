@@ -3,7 +3,7 @@ name = "mphone-protocol"
 version = "0.1.0"
 description = "Op vocabulary, envelopes and error codes: the single contract every device speaks."
 requires-python = ">=3.12"
-license = { text = "Proprietary" }
+license = "Apache-2.0"
 dependencies = ["pydantic>=2.9"]
 
 [build-system]

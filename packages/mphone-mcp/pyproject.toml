@@ -3,7 +3,7 @@ name = "mphone-mcp"
 version = "0.1.0"
 description = "MCP server exposing phone control tools (stdio and HTTP)."
 requires-python = ">=3.12"
-license = { text = "Proprietary" }
+license = "Apache-2.0"
 dependencies = ["mphone-core"]
 
 [build-system]

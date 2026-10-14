@@ -265,7 +265,7 @@ Milyonus Agent'ın (ve Claude Code gibi MCP istemcilerinin) masadaki Android'i *
 - Milyonus Agent entegrasyon rehberi (`docs/integration/milyonus-agent.md`): MCP config örneği, sistem istemi eki, araç izinleri.
 - Agent değerlendirme harness'ı v0 (`tests/agent_eval/`): 10 görev, fake + emülatör üzerinde, başarı/adım/süre/token raporu.
 - `mphone skill`, `mphone mcp`, `mphone devices`, `mphone config`.
-- Paketleme: `uv tool install` ile kurulabilir wheel (özel paket deposu veya git URL).
+- Paketleme: `uv tool install` ile kurulabilir wheel (GitHub Releases veya git URL).
 
 #### Kapsam Dışı
 - Uzak mod araçları (`phone_approval_status`, workspace sürümleme) — P5.
