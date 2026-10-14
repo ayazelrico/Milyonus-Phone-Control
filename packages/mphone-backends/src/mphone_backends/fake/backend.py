@@ -367,6 +367,11 @@ class FakeBackend(Backend):
         if not spec or not (int(spec["top"]) <= y <= int(spec["bottom"])):
             return
         name = self.current
+        overshoot = spec.get("overshoot")  # {every: N, px: P}: every Nth scroll flings P px further
+        if overshoot and delta > 0:
+            self._scrolls = getattr(self, "_scrolls", 0) + 1
+            if self._scrolls % int(overshoot["every"]) == 0:
+                delta += int(overshoot["px"])
         self.offsets[name] = max(0, min(self._max_offset(name), self.offsets.get(name, 0) + delta))
 
     def _input_drag(self, x1: int, y1: int, x2: int, y2: int, duration: float, steps: int) -> None:

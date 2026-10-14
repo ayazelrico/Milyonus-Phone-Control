@@ -27,11 +27,15 @@ class MphoneIme : InputMethodService() {
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            // `am broadcast` is ordered and prints the result code, so the sender learns what
+            // happened: 0 = nobody listened (IME not created yet), 1 = done, 2 = no focused field.
             val ic = currentInputConnection
-            if (ic == null) {
+            if (ic == null || currentInputEditorInfo == null || currentInputEditorInfo.inputType == 0) {
                 Log.w(TAG, "no focused field; ${intent.action} dropped")
+                if (isOrderedBroadcast) resultCode = RESULT_NO_FIELD
                 return
             }
+            if (isOrderedBroadcast) resultCode = RESULT_DONE
             when (intent.action) {
                 ACTION_INPUT_B64 -> {
                     val b64 = intent.getStringExtra(EXTRA_MSG) ?: return
@@ -91,5 +95,7 @@ class MphoneIme : InputMethodService() {
         const val EXTRA_MSG = "msg"
         const val SENDER_PERMISSION = "android.permission.DUMP"
         private const val MAX_CLEAR = 100_000
+        const val RESULT_DONE = 1
+        const val RESULT_NO_FIELD = 2
     }
 }

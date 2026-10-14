@@ -5,7 +5,7 @@ on:
   pull_request:
     paths: ["packages/**", "apps/android-ime/**", "tests/e2e_emulator/**", ".github/workflows/e2e-emulator.yml"]
   push:
-    branches: ["p2/**"]
+    branches: [main]
     paths: ["packages/**", "apps/android-ime/**", "tests/e2e_emulator/**", ".github/workflows/e2e-emulator.yml"]
   workflow_dispatch:
 

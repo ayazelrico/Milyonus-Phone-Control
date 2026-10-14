@@ -35,6 +35,7 @@ class ScriptedAdb(Adb):
         self.imes = f"{LAT}\ncom.milyonus.mphone.ime/.MphoneIme\n"
         self.current_ime = LAT
         self.tree = fx("uia_testfields")
+        self.ime_results: list[int] = []
         self.calls: list[str] = []
         self.__dict__.update(state)
 
@@ -62,6 +63,9 @@ class ScriptedAdb(Adb):
             return ""
         if "uiautomator dump" in cmd:
             return self.tree
+        if "am broadcast" in cmd:
+            code = self.ime_results.pop(0) if self.ime_results else 1
+            return f"Broadcasting: Intent {{ act=x }}\nBroadcast completed: result={code}\n"
         rules = {
             "wm size": fx("wm_size"),
             "wm density": fx("wm_density"),
@@ -182,8 +186,8 @@ def test_scroll_has_no_momentum_and_moves_the_finger_against_the_content() -> No
     make(adb).send("input.scroll", x=540, y=1200, dy=600, steps=3)
     (cmd,) = inputs(adb)
     assert cmd.startswith("shell input motionevent DOWN 540 1500")  # finger starts low…
-    assert "sleep 0.15 && input motionevent UP 540 900" in cmd  # …ends high, rests, then lifts
-    assert cmd.count("MOVE") == 3
+    assert cmd.endswith("input motionevent MOVE 540 900 && input motionevent UP 540 900")  # …rests, lifts
+    assert cmd.count("MOVE") == 5  # 3 steps + 2 stationary samples so the list cannot fling
 
 
 def test_drag_keeps_its_duration() -> None:
@@ -216,6 +220,23 @@ def test_turkish_text_switches_to_the_ime_and_back() -> None:
     broadcast = next(c for c in adb.calls if "INPUT_B64" in c)
     assert base64.b64decode(broadcast.split()[-1]).decode("utf-8") == text
     assert adb.current_ime == LAT  # the person's keyboard is back
+
+
+def test_ime_not_listening_yet_is_retried(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    adb = ScriptedAdb(ime_results=[0, 0, 1])  # the IME service is created after `ime set`
+    assert make(adb).send("input.text", s="Şule")["mode_used"] == "ime"
+    assert sum("INPUT_B64" in c for c in adb.calls) == 3
+
+
+def test_ime_reports_no_focused_field() -> None:
+    from mphone_protocol import NotFound
+
+    adb = ScriptedAdb(ime_results=[2])
+    with pytest.raises(NotFound) as e:
+        make(adb).send("input.text", s="Şule")
+    assert e.value.user_action and "dokunun" in e.value.user_action
+    assert adb.current_ime == LAT  # keyboard restored even on failure
 
 
 def test_turkish_without_ime_asks_for_install() -> None:

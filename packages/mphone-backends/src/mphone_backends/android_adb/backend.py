@@ -39,7 +39,18 @@ from . import parse
 from .adb import UNAUTHORIZED_HINT, Adb
 from .apps import ALIASES, label_for
 from .keys import keycode
-from .text import KNOWN_IMES, Ime, ascii_safe, broadcast_command, clear_command, input_text_command
+from .text import (
+    KNOWN_IMES,
+    MPHONE_IME,
+    RESULT_DONE,
+    RESULT_NO_FIELD,
+    Ime,
+    ascii_safe,
+    broadcast_command,
+    broadcast_result,
+    clear_command,
+    input_text_command,
+)
 
 Dict = dict[str, Any]
 log = logging.getLogger(__name__)
@@ -47,6 +58,7 @@ LOCKED_ACTION = "Telefonun kilidini açın; PIN asla otomatik yazılmaz. Sonra a
 UI_DUMP = "/sdcard/mphone_ui.xml"
 GATE_TTL = 2.0
 TREE_BACKOFF = 10.0
+IME_BIND_TIMEOUT = 5.0
 
 
 class PrimaryUnreachable(DeviceOffline):
@@ -400,8 +412,11 @@ class AndroidAdb(Backend):
             f"input motionevent MOVE {round(x1 + (x2 - x1) * i / steps)} {round(y1 + (y2 - y1) * i / steps)}"
             for i in range(1, steps + 1)
         )
+        # Rest at the end with stationary MOVEs before UP: the velocity tracker then sees zero
+        # speed and the list cannot fling (API 34 flung once after a plain sleep, skipping 2 rows).
+        hold = f"input motionevent MOVE {x2} {y2} && sleep 0.1 && input motionevent MOVE {x2} {y2}"
         self._sh(
-            f"input motionevent DOWN {x1} {y1} && {moves} && sleep 0.15 && input motionevent UP {x2} {y2}"
+            f"input motionevent DOWN {x1} {y1} && {moves} && sleep 0.1 && {hold} && input motionevent UP {x2} {y2}"
         )
 
     def _input_keys(self, combo: str) -> None:
@@ -416,7 +431,12 @@ class AndroidAdb(Backend):
         return None
 
     def _with_ime(self, command: str) -> None:
-        """Switch to our IME for one command and switch back, so the person's keyboard returns."""
+        """Switch to our IME for one command and switch back, so the person's keyboard returns.
+
+        The mphone IME answers the ordered broadcast: 0 = nobody listened yet (the service is
+        created asynchronously after `ime set`, PITFALLS#android-ime-first-bind), 1 = done,
+        2 = no focused field. Retry on 0; never report success for text that went nowhere.
+        """
         ime = self._installed_ime()
         if ime is None:
             raise NeedsUser(
@@ -426,9 +446,26 @@ class AndroidAdb(Backend):
         previous = self._sh("settings get secure default_input_method", check=False).strip()
         if previous != ime.ime_id:
             self._sh(f"ime enable {ime.ime_id} && ime set {ime.ime_id}")
-            time.sleep(0.5)  # the new IME binds to the focused field
         try:
-            self._sh(command.format(ime=ime) if "{ime" in command else command)
+            if ime is not MPHONE_IME:  # third-party IME: no result codes, so wait and send once
+                time.sleep(1.0)
+                self._sh(command)
+                return
+            deadline = time.monotonic() + IME_BIND_TIMEOUT
+            while True:
+                code = broadcast_result(self._sh(command))
+                if code == RESULT_DONE:
+                    return
+                if code == RESULT_NO_FIELD:
+                    raise NotFound(
+                        "no text field is focused, so the text went nowhere",
+                        user_action="Önce metin alanına dokunun (tap_text / tap_ui), sonra yazın.",
+                    )
+                if time.monotonic() >= deadline:
+                    raise InternalError(
+                        f"the mphone keyboard did not answer within {IME_BIND_TIMEOUT:g}s (result={code})"
+                    )
+                time.sleep(0.3)
         finally:
             if previous and previous != ime.ime_id and previous != "null":
                 self._sh(f"ime set {shlex.quote(previous)}", check=False)

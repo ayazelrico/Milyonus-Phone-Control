@@ -54,3 +54,14 @@ def broadcast_command(ime: Ime, s: str) -> str:
 
 def clear_command(ime: Ime) -> str:
     return f"am broadcast -a {ime.clear_action}"
+
+
+RESULT_NOBODY, RESULT_DONE, RESULT_NO_FIELD = 0, 1, 2
+
+
+def broadcast_result(out: str) -> int | None:
+    """The result code `am broadcast` printed ("Broadcast completed: result=N")."""
+    import re
+
+    m = re.search(r"Broadcast completed: result=(-?\d+)", out)
+    return int(m.group(1)) if m else None

@@ -44,6 +44,16 @@ def test_send_button_echoes(test_screen: Phone) -> None:
     assert p.wait_for_text("Gönderildi: Şule Öztürk", timeout=5) is not None
 
 
+def test_typing_without_a_focused_field_is_an_error_not_silence(test_screen: Phone) -> None:
+    from mphone_protocol import NotFound
+
+    p = test_screen
+    p.press("back")  # hide any keyboard; nothing is focused on a freshly opened screen
+    with pytest.raises(NotFound) as e:
+        p.type_text("Çağrı")
+    assert e.value.user_action
+
+
 def test_password_field_is_flagged(test_screen: Phone) -> None:
     pin = test_screen.find_nodes(resource_id="mphone_password")[0]
     assert pin["password"] is True and pin["editable"] is True
@@ -68,10 +78,21 @@ def test_screenshot_matches_bounds(phone: Phone) -> None:
         assert img.size == (b["w"], b["h"])
 
 
-def test_locked_phone_refuses_and_sends_no_touch(phone: Phone) -> None:
+def test_doctor_with_write_test() -> None:
+    from mphone_cli.doctor import android_steps
+
+    steps = android_steps("", write_test=True)
+    failed = [s for s in steps if not s.ok]
+    assert not failed, failed
+
+
+def test_zz_locked_phone_refuses_and_sends_no_touch(phone: Phone) -> None:
+    """Runs LAST (name + position): it changes lock settings, then must leave the phone unlocked."""
     adb = ["adb", "shell"]
     run = lambda *a: subprocess.run([*adb, *a], capture_output=True, text=True, check=False)  # noqa: E731
-    before = run("settings", "get", "secure", "lock_screen_lock_after_timeout").stdout.strip()
+    before_timeout = run("settings", "get", "secure", "lock_screen_lock_after_timeout").stdout.strip()
+    before_disabled = run("settings", "get", "secure", "lockscreen.disabled").stdout.strip()
+    # Emulator images ship with the lock screen disabled (PITFALLS#android-emulator-lockscreen-disabled).
     run("locksettings", "set-disabled", "false")
     run("settings", "put", "secure", "lockscreen.disabled", "0")
     run("settings", "put", "secure", "lock_screen_lock_after_timeout", "0")
@@ -85,9 +106,6 @@ def test_locked_phone_refuses_and_sends_no_touch(phone: Phone) -> None:
                 break
             time.sleep(1)
         else:
-            # Seen on google_apis API 30/34 images in CI even with the lock screen enabled, the
-            # delay at 0 and a PIN set (PITFALLS#android-emulator-lockscreen-disabled). Lock
-            # detection is then verified by fixtures + scripted tests and on a real phone (A2.17).
             pytest.skip("this emulator never shows a keyguard; verify lock detection on a real phone")
         phone.backend._gate_at = 0.0  # pyright: ignore[reportAttributeAccessIssue]
         assert phone.connection_state() == "locked"
@@ -97,17 +115,22 @@ def test_locked_phone_refuses_and_sends_no_touch(phone: Phone) -> None:
             phone.type_text("1234")
     finally:
         run("locksettings", "clear", "--old", "1234")
-        if before in ("null", ""):
-            run("settings", "delete", "secure", "lock_screen_lock_after_timeout")
+        for key, value in (
+            ("lock_screen_lock_after_timeout", before_timeout),
+            ("lockscreen.disabled", before_disabled),
+        ):
+            if value in ("null", ""):
+                run("settings", "delete", "secure", key)
+            else:
+                run("settings", "put", "secure", key, value)
+        for _ in range(10):  # a swipe keyguard can outlive the PIN: dismiss until it is gone
+            run("input", "keyevent", "KEYCODE_WAKEUP")
+            run("wm", "dismiss-keyguard")
+            run("input", "keyevent", "82")
+            time.sleep(1)
+            if "isKeyguardShowing=false" in run("dumpsys", "window").stdout:
+                break
         else:
-            run("settings", "put", "secure", "lock_screen_lock_after_timeout", before)
-        run("input", "keyevent", "KEYCODE_WAKEUP")
-        run("wm", "dismiss-keyguard")
-
-
-def test_doctor_with_write_test() -> None:
-    from mphone_cli.doctor import android_steps
-
-    steps = android_steps("", write_test=True)
-    failed = [s for s in steps if not s.ok]
-    assert not failed, failed
+            pytest.fail(
+                "could not unlock the emulator after the lock test; later tests would see a locked phone"
+            )

@@ -135,6 +135,18 @@
 - **Çözüm:** Testte `locksettings set-disabled false`, gecikmeyi 0 yap, uyut, ≥ 7 sn bekle, keyguard'ı yokla; sonra eski değerleri geri yükle. Gerçek telefonlarda bu ayarlara dokunulmaz.
 - **Test:** `tests/e2e_emulator/test_android_e2e.py::test_locked_phone_refuses_and_sends_no_touch`.
 
+### android-ime-first-bind
+- **Belirti:** Android 14'te ilk Türkçe `type_text` alanı boş bırakıyor; sonraki çağrılar çalışıyor (E2E, API 34).
+- **Neden:** `ime set` sonrası klavye servisi eşzamansız oluşturuluyor; broadcast o anda gönderilirse dinleyen yok (`result=0`).
+- **Çözüm:** mphone klavyesi sıralı yayına sonuç kodu döner (1 yazıldı, 2 odaklı alan yok); backend 0 geldikçe 5 sn'ye kadar yeniden dener, 2'de `NotFound` verir. Metin sessizce kaybolmaz.
+- **Test:** `test_backend.py::test_ime_not_listening_yet_is_retried`, `test_ime_reports_no_focused_field`; E2E `test_typing_without_a_focused_field_is_an_error_not_silence`.
+
+### scroll-overshoot
+- **Belirti:** `scroll_collect` bir listede 2 satırı atladı (Öğe 85, 86) — API 34 E2E.
+- **Neden:** `motionevent` ile momentumsuz kaydırma bile bir kez fırladı: parmak kalkmadan önceki bekleme hız ölçeri sıfırlamaya yetmedi.
+- **Çözüm:** (1) Android: kaldırmadan önce aynı noktada iki durağan MOVE. (2) Platformdan bağımsız: `scroll_collect`, yeni ekranın öğeleri öncekiyle hiç örtüşmüyorsa yarım adım geri gidip örtüşen ekrandan devam eder — öğeler eksiksiz ve sıralı kalır. Sabit başlıklar örtüşme sayılmasın diye kontrol ekstraktörün öğeleri üzerinden yapılır.
+- **Test:** `test_helpers_fake.py::test_scroll_collect_recovers_rows_skipped_by_a_fling` (fake `overshoot`), E2E `test_scroll_collect_walks_200_rows_in_order`.
+
 ## OCR
 
 ### ocr-comma-below
