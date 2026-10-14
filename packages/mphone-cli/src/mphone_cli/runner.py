@@ -81,6 +81,8 @@ def run_script(
     timeout: float = DEFAULT_TIMEOUT,
     owner: str = "mphone run",
     lock: bool = True,
+    allow: list[str] | None = None,
+    trust_level: str = "standard",
 ) -> RunResult:
     timeout = max(MIN_TIMEOUT, min(MAX_TIMEOUT, timeout))
     uri, _ = resolve_uri(device)
@@ -96,6 +98,8 @@ def run_script(
         MPHONE_RUN_DIR=str(run_dir),
         MPHONE_TASK=task,
         PYTHONIOENCODING="utf-8",
+        MPHONE_ALLOW=",".join(allow or []),
+        MPHONE_TRUST=trust_level,
     )
     lease = LocalLease(uri, owner=owner, purpose=task) if lock else None
     start, wall = time.monotonic(), time.time()

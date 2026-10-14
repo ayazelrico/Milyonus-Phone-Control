@@ -356,10 +356,14 @@ version = "0.1.0"
 source = { editable = "packages/mphone-core" }
 dependencies = [
     { name = "mphone-protocol" },
+    { name = "pyyaml" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "mphone-protocol", editable = "packages/mphone-protocol" }]
+requires-dist = [
+    { name = "mphone-protocol", editable = "packages/mphone-protocol" },
+    { name = "pyyaml", specifier = ">=6.0" },
+]
 
 [[package]]
 name = "mphone-dev"
