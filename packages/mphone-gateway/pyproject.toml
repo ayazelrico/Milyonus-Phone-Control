@@ -3,7 +3,7 @@ name = "mphone-gateway"
 version = "0.1.0"
 description = "Control plane: API, auth, leases, policy, audit, routing."
 requires-python = ">=3.12"
-license = { text = "Proprietary" }
+license = "Apache-2.0"
 dependencies = ["mphone-protocol"]
 
 [build-system]

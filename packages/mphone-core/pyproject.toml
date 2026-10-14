@@ -3,7 +3,7 @@ name = "mphone-core"
 version = "0.1.0"
 description = "Backend base class, connect(), helpers, Turkish text normalisation, OCR interface, config."
 requires-python = ">=3.12"
-license = { text = "Proprietary" }
+license = "Apache-2.0"
 dependencies = ["mphone-protocol"]
 
 [build-system]

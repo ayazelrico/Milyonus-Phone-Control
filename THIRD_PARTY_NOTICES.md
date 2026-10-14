@@ -1,6 +1,6 @@
 # Üçüncü Taraf Bildirimleri
 
-Bu projeye dahil edilen veya bundan türetilen üçüncü taraf kod ve varlıklar. Bir bağımlılığı kopyalayarak/uyarlayarak dahil ettiğinde (paket yöneticisiyle kurulanlar hariç) buraya ekle (CLAUDE.md §9).
+Proje lisansı: Apache-2.0 (LICENSE, NOTICE). Bu projeye dahil edilen veya bundan türetilen üçüncü taraf kod ve varlıklar. Bir bağımlılığı kopyalayarak/uyarlayarak dahil ettiğinde (paket yöneticisiyle kurulanlar hariç) buraya ekle (CLAUDE.md §9).
 
 | Bileşen | Kaynak | Lisans | Nasıl kullanılıyor |
 |---|---|---|---|

@@ -5,6 +5,9 @@ Protokol sürümü (`ops.v1`) paket sürümünden bağımsızdır (Plan.md §7.6
 
 ## [Unreleased]
 
+### Changed
+- Lisans Apache-2.0 (LICENSE, NOTICE); repo public; Q1–Q13 kesinleşti; `main` branch koruması (karar kaydı).
+
 ### Added
 - P0: uv workspace iskeleti (9 paket), ruff/pyright/pytest/pre-commit yapılandırması, CI (A0.01–A0.03).
 - P0: ADR-0001…0015, PITFALLS.md v0, karar kaydı, cihaz hazırlık rehberi, referans proje notları (A0.04–A0.09).
