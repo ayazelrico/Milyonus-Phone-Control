@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="mphone_text" type="id" />
+    <item name="mphone_password" type="id" />
+    <item name="mphone_send" type="id" />
+    <item name="mphone_echo" type="id" />
+    <item name="mphone_list" type="id" />
+</resources>

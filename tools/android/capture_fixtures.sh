@@ -23,6 +23,9 @@ sh() {  # sh NAME 'device shell command'
   cap "$name" "${ADB[@]}" shell "$@"
 }
 pause() { sleep "${1:-2}"; }
+# `uiautomator dump /dev/tty` prints only "UI hierchary dumped to: /dev/tty" under a
+# non-interactive adb shell (no tty): the XML never arrives. Dump to a file and read it back.
+uia() { sh "$1" "uiautomator dump /sdcard/mphone_ui.xml >/dev/null && cat /sdcard/mphone_ui.xml"; }
 
 # --- identity and transport -------------------------------------------------
 cap adb_version adb version
@@ -68,23 +71,23 @@ sh query_launchers "cmd package query-activities --brief -a android.intent.actio
 "${ADB[@]}" shell input keyevent KEYCODE_HOME; pause
 sh activity_home "dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity|ResumedActivity'"
 sh window_focus_home "dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'"
-sh uia_home_tty uiautomator dump /dev/tty
-sh uia_home_compressed_tty uiautomator dump --compressed /dev/tty
-sh uia_home_file "uiautomator dump /sdcard/mphone_ui.xml && cat /sdcard/mphone_ui.xml"
+sh uia_home_tty uiautomator dump /dev/tty   # kept as evidence of the /dev/tty pitfall
+uia uia_home
+sh uia_home_compressed "uiautomator dump --compressed /sdcard/mphone_ui.xml >/dev/null && cat /sdcard/mphone_ui.xml"
 
 # --- settings app ---------------------------------------------------------------
 "${ADB[@]}" shell am start -W -n "$("${ADB[@]}" shell cmd package resolve-activity --brief -c android.intent.category.LAUNCHER com.android.settings | tail -1 | tr -d '\r')" >"$OUT/am_start_settings.out" 2>&1
 pause 3
 sh activity_settings "dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity|ResumedActivity'"
-sh uia_settings_tty uiautomator dump /dev/tty
+uia uia_settings
 cap screencap_settings_png "${ADB[@]}" exec-out screencap -p
 # scroll with motionevent (no momentum) and with swipe (momentum) for comparison
 sh motionevent_scroll "input motionevent DOWN 540 1600 && input motionevent MOVE 540 1300 && input motionevent MOVE 540 1000 && sleep 0.1 && input motionevent UP 540 1000"
 pause
-sh uia_settings_scrolled_tty uiautomator dump /dev/tty
+uia uia_settings_scrolled
 sh swipe_fast input swipe 540 1600 540 1000 80
 pause
-sh uia_settings_flung_tty uiautomator dump /dev/tty
+uia uia_settings_flung
 
 # --- text input -------------------------------------------------------------------
 "${ADB[@]}" shell input keyevent KEYCODE_HOME; pause
@@ -99,7 +102,7 @@ sh keyevent_enter input keyevent KEYCODE_ENTER
 sh notifications_noredact "dumpsys notification --noredact | head -400"
 sh statusbar_expand cmd statusbar expand-notifications
 pause
-sh uia_notifications_tty uiautomator dump /dev/tty
+uia uia_notifications
 sh statusbar_collapse cmd statusbar collapse-notifications
 
 # --- asleep ------------------------------------------------------------------------
@@ -108,17 +111,58 @@ sh power_asleep "dumpsys power | grep -E 'mWakefulness=|Display Power'"
 sh window_asleep "dumpsys window | grep -E 'isKeyguardShowing|mDreamingLockscreen|mShowingLockscreen|KeyguardShowing'"
 
 # --- locked with a PIN (set, observe, clear) --------------------------------------------
+# Android locks a secure device only after lock_screen_lock_after_timeout (default 5 s) once the
+# screen is off; capturing sooner records an UNLOCKED phone. Force 0 and wait anyway.
+sh lock_timeout_before settings get secure lock_screen_lock_after_timeout
+"${ADB[@]}" shell settings put secure lock_screen_lock_after_timeout 0
 sh locksettings_set locksettings set-pin 1234
-"${ADB[@]}" shell input keyevent KEYCODE_SLEEP; pause 2
-"${ADB[@]}" shell input keyevent KEYCODE_WAKEUP; pause 2
+"${ADB[@]}" shell input keyevent KEYCODE_SLEEP; pause 7
+"${ADB[@]}" shell input keyevent KEYCODE_WAKEUP; pause 3
 sh power_locked "dumpsys power | grep -E 'mWakefulness=|Display Power'"
 sh window_locked "dumpsys window | grep -E 'isKeyguardShowing|mDreamingLockscreen|mShowingLockscreen|KeyguardShowing'"
 sh window_policy_locked "dumpsys window policy | grep -iE 'keyguard|showing'"
-sh uia_locked_tty uiautomator dump /dev/tty
+uia uia_locked
 cap screencap_locked_png "${ADB[@]}" exec-out screencap -p
+sh window_locked_full "dumpsys window | grep -iE 'keyguard|lockscreen|dream'"
+sh activity_locked "dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity|ResumedActivity'"
+sh tap_while_locked input tap 540 1200
 sh locksettings_clear locksettings clear --old 1234
+"${ADB[@]}" shell settings put secure lock_screen_lock_after_timeout "$(tr -d '\r' < "$OUT/lock_timeout_before.out")"
 "${ADB[@]}" shell input keyevent KEYCODE_WAKEUP; "${ADB[@]}" shell wm dismiss-keyguard; pause 2
 sh window_after_clear "dumpsys window | grep -E 'isKeyguardShowing|mDreamingLockscreen|mShowingLockscreen|KeyguardShowing'"
+
+
+# --- mphone IME: Turkish text into a real field (needs IME_APK, the debug build) ------------
+if [ -n "${IME_APK:-}" ] && [ -f "$IME_APK" ]; then
+  cap ime_install "${ADB[@]}" install -r -g "$IME_APK"
+  sh ime_enable ime enable com.milyonus.mphone.ime/.MphoneIme
+  sh ime_list_all ime list -a -s
+  sh ime_before settings get secure default_input_method
+  sh test_activity_start am start -W -n com.milyonus.mphone.ime/.TestFieldsActivity
+  pause 2
+  uia uia_testfields
+  # centre of the text field from its bounds="[l,t][r,b]"
+  B=$(tr '>' '\n' < "$OUT/uia_testfields.out" | grep 'mphone_text' | grep -o 'bounds="[^"]*"' | head -1 | tr -dc '0-9,[]' | tr '[],' '   ')
+  set -- $B; X=$(( ($1 + $3) / 2 )); Y=$(( ($2 + $4) / 2 ))
+  echo "$X $Y" > "$OUT/testfields_text_centre.out"
+  "${ADB[@]}" shell input tap "$X" "$Y"; pause 1
+  sh ime_set ime set com.milyonus.mphone.ime/.MphoneIme
+  pause 2
+  MSG=$(printf '%s' "Çağrı ışığı söndü; İğdır'a gidiyoruz! 🚀" | base64 | tr -d '\n')
+  sh ime_broadcast_turkish am broadcast -a com.milyonus.mphone.ime.INPUT_B64 --es msg "$MSG"
+  pause 1
+  uia uia_testfields_typed
+  sh ime_broadcast_clear am broadcast -a com.milyonus.mphone.ime.CLEAR
+  pause 1
+  uia uia_testfields_cleared
+  sh ime_broadcast_turkish2 am broadcast -a com.milyonus.mphone.ime.INPUT_B64 --es msg "$(printf '%s' 'Şule Öztürk' | base64)"
+  pause 1
+  uia uia_testfields_typed2
+  sh ime_restore ime set "$(tr -d '\r' < "$OUT/ime_before.out")"
+  sh ime_after settings get secure default_input_method
+else
+  echo "IME_APK not set; skipping IME capture" > "$OUT/ime_skipped.out"
+fi
 
 # --- errors ----------------------------------------------------------------------------
 cap error_bad_serial adb -s does-not-exist shell true
