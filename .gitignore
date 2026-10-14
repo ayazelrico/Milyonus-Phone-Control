@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.hypothesis/
+
+# Secrets — never commit (CLAUDE.md §7.2)
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+credentials.json
+
+# Device captures may contain personal data (CLAUDE.md §7.2.3)
+/captures/
+*.local.png
+
+# Node / Android / OS
+node_modules/
+.next/
+.gradle/
+local.properties
+apps/**/build/
+.DS_Store
+.idea/
+.vscode/

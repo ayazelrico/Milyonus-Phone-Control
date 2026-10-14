@@ -1,0 +1,22 @@
+name: long_list_120
+device: {w: 1080, h: 2400, model: Fake Pixel 8, os_version: "15"}
+start: list
+status_bar: {text: "09:00", tick: true}
+apps:
+  - {app_id: com.fake.list, label: Liste, screen: list}
+screens:
+  list:
+    app: com.fake.list
+    elements:
+      - {id: title, text: Uzun liste, x: 540, y: 200, w: 500, h: 90}
+    list:
+      top: 300
+      bottom: 2100
+      row_h: 150
+      items: {pattern: "Öğe {i}", count: 120}
+      on_tap_any: {goto: detail}
+  detail:
+    app: com.fake.list
+    back: list
+    elements:
+      - {id: title, text: Ayrıntı, x: 540, y: 200, w: 500, h: 90}

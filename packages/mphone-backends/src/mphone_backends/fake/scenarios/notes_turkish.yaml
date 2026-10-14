@@ -1,0 +1,28 @@
+name: notes_turkish
+device: {w: 1080, h: 2400, model: Fake Galaxy A54, manufacturer: Milyonus, os_version: "14"}
+start: home
+apps:
+  - {app_id: com.fake.launcher, label: Launcher, system: true, screen: home}
+  - {app_id: com.fake.notes, label: Notlar, aliases: [Notes, Keep], screen: notes}
+screens:
+  home:
+    app: com.fake.launcher
+    elements:
+      - {id: icon_notes, content_desc: Notlar, x: 200, y: 560, w: 140, h: 140, clickable: true, on_tap: {launch: com.fake.notes}}
+      - {id: label_notes, text: Notlar, x: 200, y: 670, w: 160, h: 50}
+  notes:
+    app: com.fake.notes
+    back: home
+    elements:
+      - {id: title, text: Notlar, x: 540, y: 220, w: 400, h: 90}
+      - {id: new_note, text: Yeni not, x: 900, y: 2050, w: 260, h: 120, clickable: true, resource_id: com.fake.notes:id/fab, on_tap: {goto: editor}}
+      - {id: empty, text: Henüz not yok, x: 540, y: 900, w: 500, h: 60}
+  editor:
+    app: com.fake.notes
+    back: notes
+    on_key:
+      enter: {goto: notes}
+    elements:
+      - {id: note_title, editable: true, hint: Başlık, x: 540, y: 300, w: 980, h: 110, resource_id: com.fake.notes:id/title}
+      - {id: note_body, editable: true, hint: Not, x: 540, y: 700, w: 980, h: 600, resource_id: com.fake.notes:id/body}
+      - {id: save, text: Kaydet, x: 900, y: 180, w: 200, h: 90, clickable: true, on_tap: {goto: notes}}

@@ -1,0 +1,14 @@
+[project]
+name = "mphone-gateway"
+version = "0.1.0"
+description = "Control plane: API, auth, leases, policy, audit, routing."
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+dependencies = ["mphone-protocol"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mphone_gateway"]

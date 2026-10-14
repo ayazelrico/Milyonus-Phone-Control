@@ -1,0 +1,103 @@
+[project]
+name = "mphone-dev"
+version = "0.1.0"
+description = "Milyonus Phone Control — development workspace root (not published)."
+requires-python = ">=3.12"
+dependencies = [
+    "mphone-protocol",
+    "mphone-core",
+    "mphone-backends",
+    "mphone-cli",
+    "mphone-mcp",
+    "mphone-node",
+    "mphone-gateway",
+    "mphone-runner",
+    "mphone-sdk",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.7",
+    "pyright>=1.1.390",
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "pytest-asyncio>=0.24",
+    "hypothesis>=6.115",
+    "jsonschema>=4.23",
+    "pre-commit>=4.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+mphone-protocol = { workspace = true }
+mphone-core = { workspace = true }
+mphone-backends = { workspace = true }
+mphone-cli = { workspace = true }
+mphone-mcp = { workspace = true }
+mphone-node = { workspace = true }
+mphone-gateway = { workspace = true }
+mphone-runner = { workspace = true }
+mphone-sdk = { workspace = true }
+
+# --- ruff -------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+extend-exclude = ["apps", "**/_generated/**"]
+
+[tool.ruff.format]
+exclude = ["*.md"]  # docs hold illustrative snippets, not code to format
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "S"]
+ignore = [
+    "S101",   # assert is fine in tests and for invariants
+    "S603",   # subprocess without shell is our standard (CLAUDE.md §8.1)
+    "S607",   # adb/xcrun are resolved from PATH by design
+    "RUF001", # Turkish characters in strings are intentional
+    "RUF002",
+    "RUF003",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "mphone_protocol", "mphone_core", "mphone_backends", "mphone_cli", "mphone_mcp",
+    "mphone_node", "mphone_gateway", "mphone_runner", "mphone_sdk",
+]
+
+# --- pyright ----------------------------------------------------------------
+
+[tool.pyright]
+pythonVersion = "3.12"
+include = ["packages", "tests", "tools"]
+exclude = ["**/node_modules", "**/__pycache__", ".venv"]
+typeCheckingMode = "basic"
+strict = ["packages/mphone-protocol/src", "packages/mphone-core/src"]
+venvPath = "."
+venv = ".venv"
+
+# --- pytest -----------------------------------------------------------------
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "slow: long-running tests, skipped with -m 'not slow'",
+    "ocr: OCR corpus quality tests",
+    "device: needs a real phone (skipped in CI)",
+    "emulator: needs a running Android emulator",
+    "macos: needs macOS and pyobjc",
+    "docker: needs Docker",
+]
+
+[tool.coverage.run]
+source = ["packages"]
+branch = true

@@ -1,0 +1,77 @@
+# Annotated reference scenario for the fake phone (A1.13).
+#
+# Coordinates are device pixels; x, y of an element is its CENTRE (as in protocol boxes).
+# Element keys: id, text, content_desc, resource_id, class, x, y, w, h, clickable, editable,
+#   password, hint, on_tap, on_long_press. Actions: {goto: SCREEN} {launch: APP} {back: true} {home: true}
+# Screen keys: app, back (screen for nav.back), elements, list, on_key {enter: ACTION}, tree: false
+#   (the tree is "unavailable", screen.text falls back to pixels), secure: true (FLAG_SECURE).
+# List keys: top, bottom (viewport), row_h, x, w, items (list or {pattern, count}), on_tap {text: ACTION},
+#   on_tap_any: ACTION. Rows are clickable containers with a non-clickable label, like Android.
+# Top level: device, state (ready|locked|asleep), locked_when_woken, start, apps, screens,
+#   status_bar ({text, tick}: tick advances the clock on every read), notifications, raw,
+#   faults [{op, code, after, times, message}], latency_ms {default, <op>}.
+name: settings_about
+device: {w: 1080, h: 2400, model: Fake Pixel 8, manufacturer: Milyonus, os_version: "14"}
+state: ready
+start: home
+status_bar: {text: "14:02", tick: true}
+apps:
+  - {app_id: com.fake.launcher, label: Launcher, system: true, screen: home}
+  - {app_id: com.android.settings, label: Ayarlar, aliases: [Settings], system: true, screen: settings}
+  - {app_id: com.android.chrome, label: Chrome, screen: chrome}
+screens:
+  home:
+    app: com.fake.launcher
+    elements:
+      - {id: icon_settings, content_desc: Ayarlar, x: 200, y: 560, w: 140, h: 140, clickable: true, on_tap: {launch: com.android.settings}}
+      - {id: label_settings, text: Ayarlar, x: 200, y: 670, w: 160, h: 50}
+      - {id: icon_chrome, content_desc: Chrome, x: 420, y: 560, w: 140, h: 140, clickable: true, on_tap: {launch: com.android.chrome}}
+      - {id: label_chrome, text: Chrome, x: 420, y: 670, w: 160, h: 50}
+  settings:
+    app: com.android.settings
+    back: home
+    elements:
+      - {id: title, text: Ayarlar, x: 540, y: 220, w: 400, h: 90}
+    list:
+      top: 320
+      bottom: 2200
+      row_h: 160
+      items:
+        - Ağ ve internet
+        - Bağlı cihazlar
+        - Uygulamalar
+        - Bildirimler
+        - Pil
+        - Depolama
+        - Ses ve titreşim
+        - Ekran
+        - Duvar kağıdı ve stil
+        - Erişilebilirlik
+        - Güvenlik ve gizlilik
+        - Konum
+        - Güvenlik ve acil durum
+        - Şifreler ve hesaplar
+        - Dijital Denge
+        - Google
+        - Sistem
+        - Telefon hakkında
+      on_tap:
+        Telefon hakkında: {goto: about}
+  about:
+    app: com.android.settings
+    back: settings
+    elements:
+      - {id: title, text: Telefon hakkında, x: 540, y: 220, w: 600, h: 90}
+      - {id: name_k, text: Cihaz adı, x: 300, y: 420, w: 400, h: 60}
+      - {id: name_v, text: Fake Pixel 8, x: 300, y: 480, w: 400, h: 50}
+      - {id: android_k, text: Android sürümü, x: 300, y: 620, w: 400, h: 60, clickable: true}
+      - {id: android_v, text: "14", x: 300, y: 680, w: 400, h: 50}
+      - {id: build_k, text: Yapım numarası, x: 300, y: 820, w: 400, h: 60}
+      - {id: build_v, text: AP2A.240905.003, x: 300, y: 880, w: 400, h: 50}
+  chrome:
+    app: com.android.chrome
+    back: home
+    tree: false   # simulates a screen whose tree never goes idle
+    elements:
+      - {id: url, text: milyonus.com, x: 540, y: 180, w: 900, h: 80}
+      - {id: headline, text: Milyonus, x: 540, y: 600, w: 600, h: 120}

@@ -1,0 +1,16 @@
+name: locked_phone
+device: {w: 1080, h: 2400, model: Fake Pixel 8, os_version: "14"}
+state: locked
+start: home
+apps:
+  - {app_id: com.android.settings, label: Ayarlar, screen: settings}
+screens:
+  home:
+    app: com.fake.launcher
+    elements:
+      - {id: icon_settings, content_desc: Ayarlar, x: 200, y: 560, w: 140, h: 140, clickable: true, on_tap: {launch: com.android.settings}}
+  settings:
+    app: com.android.settings
+    back: home
+    elements:
+      - {id: title, text: Ayarlar, x: 540, y: 220, w: 400, h: 90}

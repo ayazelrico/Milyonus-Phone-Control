@@ -1,0 +1,21 @@
+{
+  "valid_requests": [
+    {"id": "op_1", "op": "input.tap", "kw": {"x": 1, "y": 2}},
+    {"v": 1, "id": "op_2", "op": "screen.text", "device_id": "dev_1", "lease_id": "lse_1", "deadline_ms": 15000,
+     "trace": {"trace_id": "t1"}, "meta": {"task": "Android sürümünü oku", "step": "Ayarlar"}}
+  ],
+  "invalid_requests": [
+    {"op": "input.tap"},
+    {"id": "op_3", "op": "input.tap", "v": 2},
+    {"id": "op_4", "op": "input.tap", "lease": "lse_1"}
+  ],
+  "valid_results": [
+    {"id": "op_1", "ok": true, "result": null, "duration_ms": 12},
+    {"id": "op_2", "ok": false, "error": {"code": "DEVICE_LOCKED", "message": "kilitli", "retryable": false,
+     "user_action": "Telefonun kilidini açın."}}
+  ],
+  "invalid_results": [
+    {"id": "op_5", "ok": false, "error": {"code": "BROKEN", "message": "x", "retryable": false}},
+    {"ok": true}
+  ]
+}
