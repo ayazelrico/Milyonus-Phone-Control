@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+from pathlib import Path
 
 from mphone_cli import __version__
 from mphone_protocol import MphoneError
@@ -13,6 +14,14 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="command")
 
     sub.add_parser("version", help="sürümü yazdır")
+
+    r = sub.add_parser(
+        "run", help="telefonda Python script çalıştır (helper'lar yüklü); stdin, dosya veya -c"
+    )
+    r.add_argument("file", nargs="?", help="script dosyası (yoksa stdin)")
+    r.add_argument("-c", "--code", help="script metni")
+    r.add_argument("--device", help="cihaz URI'si (fake:settings_about, android:SERİ, …)")
+    r.add_argument("--timeout", type=float, default=300, help="saniye (5–1800, varsayılan 300)")
 
     d = sub.add_parser("doctor", help="bağlantı zincirini teşhis et")
     d.add_argument("platform", nargs="?", default="android", choices=["android", "ios"])
@@ -43,6 +52,23 @@ def main(argv: list[str] | None = None) -> int:
         if args.command in (None, "version"):
             print(f"mphone {__version__}")
             return 0
+        if args.command == "run":
+            from mphone_cli.runner import run_script
+
+            if args.code is not None:
+                code = args.code
+            elif args.file:
+                code = Path(args.file).read_text(encoding="utf-8")
+            else:
+                code = sys.stdin.read()
+            result = run_script(code, args.device, args.timeout)
+            sys.stdout.write(result.stdout)
+            sys.stderr.write(
+                result.stderr if result.stderr.endswith("\n") or not result.stderr else result.stderr + "\n"
+            )
+            for warning in result.warnings:
+                print(f"! {warning}", file=sys.stderr)
+            return result.exit_code
         if args.command == "doctor":
             from mphone_cli import doctor
 
