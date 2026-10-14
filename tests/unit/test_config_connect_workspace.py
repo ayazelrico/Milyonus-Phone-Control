@@ -56,8 +56,10 @@ def test_resolution_order(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_connect_uses_entry_points_and_rejects_unknown_schemes() -> None:
     assert isinstance(connect("fake:settings_about"), FakeBackend)
-    with pytest.raises(InvalidArgument, match="no backend for 'android'"):
-        connect("android:R58N123")  # registered in P2; until then: a clear error, no fallback
+    android = connect("android:R58N123")  # P2: registered; construction touches no device
+    assert type(android).__name__ == "AndroidAdb"
+    with pytest.raises(InvalidArgument, match="no backend for 'ios-wda'"):
+        connect("ios-wda:00008110")  # P8: until then a clear error, no fallback
     with pytest.raises(InvalidArgument, match="no fake scenario"):
         connect("fake:does_not_exist")
 

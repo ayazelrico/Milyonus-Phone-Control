@@ -113,11 +113,21 @@ sh window_asleep "dumpsys window | grep -E 'isKeyguardShowing|mDreamingLockscree
 # --- locked with a PIN (set, observe, clear) --------------------------------------------
 # Android locks a secure device only after lock_screen_lock_after_timeout (default 5 s) once the
 # screen is off; capturing sooner records an UNLOCKED phone. Force 0 and wait anyway.
+# Emulator images usually ship with the lock screen disabled outright (lockscreen.disabled), so
+# a PIN alone never shows a keyguard: enable it first, and record what the image had.
+sh lockscreen_disabled_before settings get secure lockscreen.disabled
+sh prop_lockscreen_disable_default getprop ro.lockscreen.disable.default
 sh lock_timeout_before settings get secure lock_screen_lock_after_timeout
+sh locksettings_enable locksettings set-disabled false
 "${ADB[@]}" shell settings put secure lock_screen_lock_after_timeout 0
 sh locksettings_set locksettings set-pin 1234
 "${ADB[@]}" shell input keyevent KEYCODE_SLEEP; pause 7
-"${ADB[@]}" shell input keyevent KEYCODE_WAKEUP; pause 3
+"${ADB[@]}" shell input keyevent KEYCODE_WAKEUP
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  "${ADB[@]}" shell dumpsys window | grep -q 'isKeyguardShowing=true' && break
+  sleep 1
+done
+pause 1
 sh power_locked "dumpsys power | grep -E 'mWakefulness=|Display Power'"
 sh window_locked "dumpsys window | grep -E 'isKeyguardShowing|mDreamingLockscreen|mShowingLockscreen|KeyguardShowing'"
 sh window_policy_locked "dumpsys window policy | grep -iE 'keyguard|showing'"
@@ -127,7 +137,12 @@ sh window_locked_full "dumpsys window | grep -iE 'keyguard|lockscreen|dream'"
 sh activity_locked "dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity|ResumedActivity'"
 sh tap_while_locked input tap 540 1200
 sh locksettings_clear locksettings clear --old 1234
-"${ADB[@]}" shell settings put secure lock_screen_lock_after_timeout "$(tr -d '\r' < "$OUT/lock_timeout_before.out")"
+BEFORE=$(tr -d '\r' < "$OUT/lock_timeout_before.out")
+if [ "$BEFORE" = "null" ] || [ -z "$BEFORE" ]; then
+  "${ADB[@]}" shell settings delete secure lock_screen_lock_after_timeout
+else
+  "${ADB[@]}" shell settings put secure lock_screen_lock_after_timeout "$BEFORE"
+fi
 "${ADB[@]}" shell input keyevent KEYCODE_WAKEUP; "${ADB[@]}" shell wm dismiss-keyguard; pause 2
 sh window_after_clear "dumpsys window | grep -E 'isKeyguardShowing|mDreamingLockscreen|mShowingLockscreen|KeyguardShowing'"
 
@@ -135,6 +150,13 @@ sh window_after_clear "dumpsys window | grep -E 'isKeyguardShowing|mDreamingLock
 # --- mphone IME: Turkish text into a real field (needs IME_APK, the debug build) ------------
 if [ -n "${IME_APK:-}" ] && [ -f "$IME_APK" ]; then
   cap ime_install "${ADB[@]}" install -r -g "$IME_APK"
+  # The input method service scans a new package asynchronously: `ime enable` right after install
+  # answers "Unknown input method". Wait until the IME is listed.
+  WAITED=0
+  until "${ADB[@]}" shell ime list -a -s | grep -q 'com.milyonus.mphone.ime/'; do
+    sleep 1; WAITED=$((WAITED + 1)); [ $WAITED -ge 30 ] && break
+  done
+  echo "$WAITED" > "$OUT/ime_wait_seconds.out"
   sh ime_enable ime enable com.milyonus.mphone.ime/.MphoneIme
   sh ime_list_all ime list -a -s
   sh ime_before settings get secure default_input_method

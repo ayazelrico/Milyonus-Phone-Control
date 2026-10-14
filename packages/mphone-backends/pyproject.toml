@@ -8,6 +8,7 @@ dependencies = ["mphone-core", "pyyaml>=6.0", "pillow>=10.4", "defusedxml>=0.7"]
 
 [project.entry-points."mphone.backends"]
 fake = "mphone_backends.fake:from_uri"
+android = "mphone_backends.android_adb.backend:from_uri"
 
 [build-system]
 requires = ["hatchling"]
