@@ -1,0 +1,3 @@
+  mWakefulness=Awake
+  mHoldingDisplaySuspendBlocker=true
+Display Power: com.android.server.power.PowerManagerService$1@f7ddca6

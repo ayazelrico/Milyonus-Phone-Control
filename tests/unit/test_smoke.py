@@ -26,5 +26,9 @@ def test_package_imports(name: str) -> None:
 def test_cli_version(capsys: pytest.CaptureFixture[str]) -> None:
     from mphone_cli.main import main
 
-    assert main(["--version"]) == 0
+    assert main(["version"]) == 0
+    assert capsys.readouterr().out.strip() == "mphone 0.1.0"
+    with pytest.raises(SystemExit) as e:  # argparse's --version prints and exits 0
+        main(["--version"])
+    assert e.value.code == 0
     assert capsys.readouterr().out.strip() == "mphone 0.1.0"

@@ -1,0 +1,8 @@
+java.lang.NullPointerException: Attempt to get length of null array
+	at com.android.commands.input.Input$InputText.sendText(Input.java:168)
+	at com.android.commands.input.Input$InputText.run(Input.java:140)
+	at com.android.commands.input.Input.onRun(Input.java:107)
+	at com.android.internal.os.BaseCommand.run(BaseCommand.java:60)
+	at com.android.commands.input.Input.main(Input.java:71)
+	at com.android.internal.os.RuntimeInit.nativeFinishInit(Native Method)
+	at com.android.internal.os.RuntimeInit.main(RuntimeInit.java:399)
