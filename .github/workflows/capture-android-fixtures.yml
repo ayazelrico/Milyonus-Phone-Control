@@ -1,0 +1,41 @@
+# Boot Android emulators and capture raw adb output as test fixtures (A2.01–A2.12).
+# Download the artifact, review it for anything personal (emulators have none), and copy the
+# files you need into tests/fixtures/android/<device>/.
+name: capture-android-fixtures
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["p2/**"]
+    paths: ["tools/android/capture_fixtures.sh", ".github/workflows/capture-android-fixtures.yml"]
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [30, 34]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Capture on emulator (API ${{ matrix.api }})
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: bash tools/android/capture_fixtures.sh fixtures/emulator_api${{ matrix.api }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-fixtures-api${{ matrix.api }}
+          path: fixtures/
