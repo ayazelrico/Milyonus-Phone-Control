@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">mphone IME</string>
+    <string name="ime_name">mphone klavyesi</string>
+    <string name="ime_banner">mphone klavyesi etkin — metin otomasyon tarafından yazılıyor</string>
+</resources>
