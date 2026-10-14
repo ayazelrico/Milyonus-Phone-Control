@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Device backends: android_adb, ios_mirroring, ios_wda, remote, fake."
 requires-python = ">=3.12"
 license = "Apache-2.0"
-dependencies = ["mphone-core", "pyyaml>=6.0", "pillow>=10.4"]
+dependencies = ["mphone-core", "pyyaml>=6.0", "pillow>=10.4", "defusedxml>=0.7"]
 
 [project.entry-points."mphone.backends"]
 fake = "mphone_backends.fake:from_uri"
