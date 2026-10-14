@@ -12,6 +12,7 @@ from pathlib import Path
 
 from mphone_core import config, helpers, workspace
 from mphone_core.audit import AuditMiddleware
+from mphone_core.policy import Policy, PolicyMiddleware
 from mphone_protocol import MphoneError
 
 PREREQUISITE = {
@@ -47,6 +48,19 @@ def main() -> int:
             os.environ.get("MPHONE_RUN_ID"),
             os.environ.get("MPHONE_TASK"),
             trace_file=run_dir / "ops.jsonl",
+        )
+    )
+    # Policy sits inside audit, so refused ops are audited too. No approver here: the script runs
+    # without a terminal, so an approval need surfaces as APPROVAL_REQUIRED (exit 3) and the agent
+    # asks the user, then reruns with --allow RULE (SKILL.md).
+    allowed = {r for r in os.environ.get("MPHONE_ALLOW", "").split(",") if r}
+    phone.backend.use(
+        PolicyMiddleware(
+            Policy.load(),
+            approver=None,
+            mode="local",
+            trust_level=os.environ.get("MPHONE_TRUST", "standard"),
+            pre_approved=allowed,
         )
     )
     helpers.use(phone)

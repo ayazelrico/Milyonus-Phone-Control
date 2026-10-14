@@ -22,7 +22,8 @@ def test_runs_with_helpers_preloaded() -> None:
     run_dir = config.home() / "runs" / r.run_id
     assert (run_dir / "script.py").read_text(encoding="utf-8").startswith("# task:")
     ops = [json.loads(line) for line in (run_dir / "ops.jsonl").read_text(encoding="utf-8").splitlines()]
-    assert ops[0]["op"] == "apps.launch" and ops[0]["task"] == "Android sürümünü oku"
+    launch = next(o for o in ops if o["op"] == "apps.launch")
+    assert launch["task"] == "Android sürümünü oku" and launch["ok"] is True
     assert json.loads((run_dir / "result.json").read_text(encoding="utf-8"))["exit_code"] == 0
 
 
@@ -85,17 +86,24 @@ def test_audit_masks_typed_text() -> None:
     assert mask("input.tap", {"x": 1, "y": 2}) == {"x": 1, "y": 2}
 
 
-def test_typed_pin_never_lands_on_disk() -> None:
-    script = (
-        HEADER
-        + "open_app('WhatsApp'); tap_ui('Ayarlar'); tap_ui({'resource_id': 'pin'}) if False else None\n"
-    )
+def test_typing_into_a_pin_field_is_refused_and_never_written() -> None:
+    script = HEADER + "open_app('WhatsApp'); tap_ui('Ayarlar')\n"
     script += "b = find_nodes(query='PIN')[0]; tap(b['x'], b['y']); type_text('987654')"
     r = run_script(script, "fake:whatsapp_like")
-    assert r.ok, r.stderr
-    for path in (config.home() / "audit").glob("*.jsonl"):
+    assert r.exit_code == 3 and "[POLICY_DENIED]" in r.stderr
+    for path in [*(config.home() / "audit").glob("*.jsonl"), config.home() / "runs" / r.run_id / "ops.jsonl"]:
         assert "987654" not in path.read_text(encoding="utf-8")
-    assert "987654" not in (config.home() / "runs" / r.run_id / "ops.jsonl").read_text(encoding="utf-8")
+
+
+def test_allowed_text_is_masked_in_the_audit() -> None:
+    script = (
+        HEADER
+        + "open_app('WhatsApp'); tap_ui('Ara'); tap_ui({'resource_id': 'search_input'}); type_text('gizli-not-42')"
+    )
+    r = run_script(script, "fake:whatsapp_like")
+    assert r.ok, r.stderr
+    ops = (config.home() / "runs" / r.run_id / "ops.jsonl").read_text(encoding="utf-8")
+    assert '"op": "input.text"' in ops and "gizli-not-42" not in ops and '"len": 12' in ops
 
 
 def test_local_lease_conflict_names_the_holder() -> None:
@@ -110,3 +118,27 @@ def test_local_lease_conflict_names_the_holder() -> None:
         first.release()
     with LocalLease("fake:settings_about", owner="agent-b"):
         pass  # free again once released
+
+
+SEND = (
+    HEADER
+    + """open_app("WhatsApp"); tap_text("Ayşe Yılmaz"); tap_ui({"resource_id": "entry"})
+type_text("Siparişiniz yarın kargoda")
+tap_ui({"resource_id": "send"})
+print("gönderildi" if find_text("Gönderildi") else "yok")
+"""
+)
+
+
+def test_outward_send_needs_the_users_explicit_allow() -> None:
+    blocked = run_script(SEND, "fake:whatsapp_like")
+    assert blocked.exit_code == 3 and "[APPROVAL_REQUIRED]" in blocked.stderr
+    assert "--allow outward-send" in blocked.stderr
+    allowed = run_script(SEND, "fake:whatsapp_like", allow=["outward-send"])
+    assert allowed.ok and allowed.stdout.strip() == "gönderildi"
+
+
+def test_refused_ops_are_audited() -> None:
+    r = run_script(SEND, "fake:whatsapp_like")
+    ops = (config.home() / "runs" / r.run_id / "ops.jsonl").read_text(encoding="utf-8")
+    assert '"error_code": "APPROVAL_REQUIRED"' in ops
