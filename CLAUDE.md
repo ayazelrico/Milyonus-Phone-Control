@@ -17,7 +17,7 @@ Bu dosya, bu depoda çalışan Claude Code oturumları (ve insan geliştiriciler
   | `docs/PITFALLS.md` | Bir backend'e (Android/iOS/Companion) dokunmadan önce **mutlaka**. |
   | `docs/adr/` | Bir teknoloji/kararı sorgulamadan önce. |
   | `docs/decisions.md` | Açık soruların (Q1–Q13) cevapları. |
-- **Mevcut faz:** `P2 — Android ADB` (PR #2, E2E bekliyor) + `P3 — Agent arayüzleri` (dal `p3/agent-interfaces`). Gerçek telefon (A2.17) donanım bekliyor. (bu satırı faz değiştikçe güncelle).
+- **Mevcut faz:** P2 tamam (PR #2). P3 kod tamam + P5 ilk kısım (PR #3: gateway, node, gw://, MCP uzak modu). Bekleyen insan işleri: gerçek telefon (A2.17), Claude API anahtarı (A3.10), Docker (A5.17 runner sandbox).
 
 ---
 
