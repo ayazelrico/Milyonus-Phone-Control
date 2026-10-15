@@ -83,6 +83,7 @@ def run_script(
     lock: bool = True,
     allow: list[str] | None = None,
     trust_level: str = "standard",
+    extra_env: dict[str, str] | None = None,
 ) -> RunResult:
     timeout = max(MIN_TIMEOUT, min(MAX_TIMEOUT, timeout))
     uri, _ = resolve_uri(device)
@@ -101,6 +102,7 @@ def run_script(
         MPHONE_ALLOW=",".join(allow or []),
         MPHONE_TRUST=trust_level,
     )
+    env.update(extra_env or {})  # e.g. a lease credential: scoped to one lease, unlike the agent's key
     lease = LocalLease(uri, owner=owner, purpose=task) if lock else None
     start, wall = time.monotonic(), time.time()
     timed_out = False

@@ -37,6 +37,22 @@ async def create_agent(
     return agent, f"mph_{prefix}_{secret}"
 
 
+async def create_lease_credential(s: AsyncSession, agent_id: str, lease_id: str) -> str:
+    """A key that can run ops on ONE lease and nothing else; useless once the lease ends."""
+    prefix, secret = secrets.token_hex(4), secrets.token_urlsafe(24)
+    s.add(
+        ApiKey(
+            agent_id=agent_id,
+            prefix=prefix,
+            hash=digest(secret),
+            scopes=["ops:write", "devices:read"],
+            lease_id=lease_id,
+        )
+    )
+    await s.commit()
+    return f"mph_{prefix}_{secret}"
+
+
 async def verify_key(s: AsyncSession, presented: str) -> tuple[Agent, ApiKey] | None:
     parts = presented.split("_", 2)
     if len(parts) != 3 or parts[0] != "mph":

@@ -116,6 +116,7 @@ def create_app(settings: Settings | None = None, policy: Policy | None = None) -
             agent, key = found
             if scope not in key.scopes:
                 raise HTTPException(403, f"this key lacks the {scope!r} scope")
+            agent.key_lease_id = key.lease_id  # pyright: ignore[reportAttributeAccessIssue]
             return agent
 
         return Depends(dependency)
@@ -183,6 +184,15 @@ def create_app(settings: Settings | None = None, policy: Policy | None = None) -
         lease = await leases.heartbeat(s, lease, body.ttl_s)
         return {"lease_id": lease.id, "expires_at": lease.expires_at.isoformat()}
 
+    @app.post("/v1/leases/{lease_id}/credential", status_code=201)
+    async def lease_credential(lease_id: str, s: Session, agent: LeaseAgent) -> dict[str, str]:
+        """A credential for scripts: ops on this lease only (the agent's own key never enters a script)."""
+        lease = await s.get(Lease, lease_id)
+        if lease is None or lease.agent_id != agent.id or getattr(agent, "key_lease_id", None):
+            raise NotFound(f"no lease {lease_id}")
+        await leases.require(s, lease_id, agent, lease.device_id)
+        return {"credential": await auth.create_lease_credential(s, agent.id, lease_id)}
+
     @app.delete("/v1/leases/{lease_id}")
     async def release_lease(lease_id: str, s: Session, agent: LeaseAgent) -> dict[str, Any]:
         lease = await s.get(Lease, lease_id)
@@ -197,6 +207,9 @@ def create_app(settings: Settings | None = None, policy: Policy | None = None) -
     async def run_op(device_id: str, body: OpIn, s: Session, agent: OpsAgent) -> dict[str, Any]:
         start = time.monotonic()
         device = await visible_device(s, agent, device_id)
+        bound = getattr(agent, "key_lease_id", None)
+        if bound is not None and bound != body.lease_id:
+            raise HTTPException(403, "this credential is bound to another lease")
         lease = await leases.require(s, body.lease_id, agent, device.id)
         rule: str | None = None
         result: Any = None

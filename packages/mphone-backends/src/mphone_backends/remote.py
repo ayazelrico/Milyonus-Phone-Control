@@ -105,7 +105,11 @@ def from_uri(rest: str) -> RemoteBackend:
     parts = urlsplit("gw://" + rest)
     query = {k: v[0] for k, v in parse_qs(parts.query).items()}
     gateway = query.get("url") or os.environ.get("MPHONE_GATEWAY") or config.get("gateway.url")
-    key = os.environ.get("MPHONE_API_KEY")
+    # A lease credential (Plan.md §8.5) is what scripts get; an agent key works for direct use.
+    key = os.environ.get("MPHONE_LEASE_CREDENTIAL") or os.environ.get("MPHONE_API_KEY")
     if not gateway or not key:
-        raise InvalidArgument("gw:// needs MPHONE_GATEWAY (or gateway.url) and MPHONE_API_KEY")
-    return RemoteBackend(parts.netloc, query.get("lease"), str(gateway), key)
+        raise InvalidArgument(
+            "gw:// needs MPHONE_GATEWAY (or gateway.url) and MPHONE_LEASE_CREDENTIAL or MPHONE_API_KEY"
+        )
+    allow = [r for r in os.environ.get("MPHONE_ALLOW", "").split(",") if r]
+    return RemoteBackend(parts.netloc, query.get("lease"), str(gateway), key, allow=allow)

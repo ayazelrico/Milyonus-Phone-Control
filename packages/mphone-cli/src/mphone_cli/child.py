@@ -54,15 +54,17 @@ def main() -> int:
     # without a terminal, so an approval need surfaces as APPROVAL_REQUIRED (exit 3) and the agent
     # asks the user, then reruns with --allow RULE (SKILL.md).
     allowed = {r for r in os.environ.get("MPHONE_ALLOW", "").split(",") if r}
-    phone.backend.use(
-        PolicyMiddleware(
-            Policy.load(),
-            approver=None,
-            mode="local",
-            trust_level=os.environ.get("MPHONE_TRUST", "standard"),
-            pre_approved=allowed,
+    remote = (os.environ.get("MPHONE_DEVICE") or "").startswith("gw://")
+    if not remote:  # a gw:// phone is policed by the gateway, with the same rules
+        phone.backend.use(
+            PolicyMiddleware(
+                Policy.load(),
+                approver=None,
+                mode="local",
+                trust_level=os.environ.get("MPHONE_TRUST", "standard"),
+                pre_approved=allowed,
+            )
         )
-    )
     helpers.use(phone)
     namespace: dict[str, object] = {"__name__": "__main__"}
     for name in helpers.__all__:

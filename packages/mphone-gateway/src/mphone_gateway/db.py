@@ -46,6 +46,8 @@ class ApiKey(Base):
     prefix: Mapped[str] = mapped_column(String(16), unique=True)
     hash: Mapped[str] = mapped_column(String(128))
     scopes: Mapped[list[str]] = mapped_column(default=list)
+    # A lease credential: usable only for ops on this one lease (handed to scripts, Plan.md §8.5).
+    lease_id: Mapped[str | None] = mapped_column(String(40), default=None)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
 
 
