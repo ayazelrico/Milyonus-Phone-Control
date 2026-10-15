@@ -9,6 +9,12 @@ Protokol sürümü (`ops.v1`) paket sürümünden bağımsızdır (Plan.md §7.6
 - Lisans Apache-2.0 (LICENSE, NOTICE); repo public; Q1–Q13 kesinleşti; `main` branch koruması (karar kaydı).
 
 ### Added
+- P3: `mphone run` — alt süreçte script; gizli ortam değişkenleri temizlenir, zaman aşımı süreç grubunu öldürür, çıktı 50 KB'a kırpılır, her op audit'e (yazılan metin maskeli) (A3.01–A3.02).
+- P3: Yerel kiralama (dosya kilidi; sahibini söyler) (A3.03).
+- P3: Politika motoru (YAML, en katı karar kazanır): parola alanına yazma ve kod benzeri girdiler reddedilir; gönder/öde/sil onay ister; `--allow KURAL` (A3.04).
+- P3: MCP sunucusu (stdio, 15 araç, `mphone://skill`, `mphone://protocol`, `phone_task` istemi); `mphone mcp`, `mphone skill` (A3.05, A3.08).
+- P3: `skills/phone-control/SKILL.md`; Milyonus Agent entegrasyon rehberi (A3.06, A3.09).
+- P3: Agent değerlendirme düzeneği (7 görev; yarısı doğru durmayı ölçer) (A3.10).
 - P2: Android (adb) backend `AndroidAdb`: cihaz seçimi (USB > emülatör > Wi-Fi, birincil telefon asla ikamesiz), kilit/uyku kapısı, dosya tabanlı ağaç, OCR yedeği, momentumsuz kaydırma, uygulama adı çözümleme (TR/EN), bildirimler, dosya aktarımı (A2.01–A2.12).
 - P2: `apps/android-ime` — Türkçe/emoji için kendi klavyemiz (Apache-2.0; ADBKeyboard GPL-2.0 olduğu için); yalnızca adb shell/sistem yazdırabilir (DUMP izni). Debug APK'da E2E test ekranı (A2.08, A2.09, A2.16).
 - P2: `mphone doctor android [--write-test]`, `mphone android devices|pair|use|ime|awake` (A2.13, A2.14).
