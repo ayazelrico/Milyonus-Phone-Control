@@ -9,6 +9,7 @@ Protokol sürümü (`ops.v1`) paket sürümünden bağımsızdır (Plan.md §7.6
 - Lisans Apache-2.0 (LICENSE, NOTICE); repo public; Q1–Q13 kesinleşti; `main` branch koruması (karar kaydı).
 
 ### Added
+- P5: Gateway Alembic migrasyonları (`mphone-gateway migrate`), yan etkili op'larda hız sınırı (`RATE_LIMITED`, uzak backend otomatik yeniden dener), Prometheus `/metrics`, Postgres CI işi (A5.02, A5.14).
 - P5: Gateway (FastAPI + SQLAlchemy; SQLite/Postgres): API anahtarları + kapsamlar, node kaydı, cihaz kaydı, kiralama (veritabanı düzeyinde tek aktif kiralama), op hattı (kiralama → şema → politika → node → audit), maskeli audit, etiket kısıtlı agent'lar (A5.01–A5.05, A5.11, A5.13–A5.15).
 - P5: Node daemon (`mphone-node enroll|run`): gateway'e dışa doğru WebSocket, telefon başına sıralı op, kopmada üstel yeniden bağlanma (A5.06–A5.10).
 - P5: Uzak backend `gw://DEVICE?lease=…`: aynı helper'lar gateway üzerinden (A5.16). Docker'sız uçtan uca testler (A5.22).

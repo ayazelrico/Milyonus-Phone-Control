@@ -139,6 +139,10 @@ class Database:
     async def create_all(self) -> None:
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+        await self.seed()
+
+    async def seed(self) -> None:
+        """Rows every gateway needs, whether the schema came from create_all or from migrations."""
         async with self.sessions() as s:
             if await s.get(Org, DEFAULT_ORG) is None:
                 s.add(Org(id=DEFAULT_ORG, name="Milyonus"))

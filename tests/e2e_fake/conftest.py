@@ -3,6 +3,7 @@ serving fake phones. No Docker: the full remote path over real HTTP and WebSocke
 
 import asyncio
 import contextlib
+import os
 import socket
 import threading
 import time
@@ -101,11 +102,19 @@ def _device_by_local(local: str):  # type: ignore[no-untyped-def]
 
 @pytest.fixture
 def stack(tmp_path: Path) -> Iterator[Stack]:
-    db_url = f"sqlite+aiosqlite:///{tmp_path / 'gw.db'}"
+    # MPHONE_TEST_DB_URL=postgresql+asyncpg://… runs the same tests on Postgres (CI job gateway-postgres),
+    # with the schema built by the migrations rather than create_all.
+    external = os.environ.get("MPHONE_TEST_DB_URL")
+    db_url = external or f"sqlite+aiosqlite:///{tmp_path / 'gw.db'}"
+    if external:
+        from mphone_gateway.migrate import downgrade, upgrade
+
+        downgrade(db_url)
+        upgrade(db_url)
     port = free_port()
     server = uvicorn.Server(
         uvicorn.Config(
-            create_app(Settings(database_url=db_url, op_timeout_s=20)),
+            create_app(Settings(database_url=db_url, op_timeout_s=20, auto_create_schema=not external)),
             host="127.0.0.1",
             port=port,
             log_level="warning",

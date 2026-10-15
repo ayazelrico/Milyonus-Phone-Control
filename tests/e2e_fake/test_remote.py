@@ -146,3 +146,18 @@ def test_racing_acquires_have_exactly_one_winner(stack: Stack) -> None:
     with ThreadPoolExecutor(max_workers=20) as pool:
         codes = list(pool.map(lambda k: lease(stack, k, wa).status_code, keys))
     assert codes.count(201) == 1 and codes.count(409) == 19, codes
+
+
+def test_bursts_are_rate_limited_and_the_remote_backend_waits(stack: Stack) -> None:
+    key = stack.agent()
+    wa = stack.device_id(key, "fake:whatsapp_like")
+    p = remote_phone(stack, key, wa, lease(stack, key, wa).json()["lease_id"])
+    for _ in range(30):  # far over 8 taps/s: every one still succeeds, by waiting
+        p.tap(5, 5)
+    rows = stack.http(key).get("/v1/audit", params={"device_id": wa, "limit": 200}).json()
+    taps = [r for r in rows if r["op"] == "input.tap"]
+    assert sum(r["ok"] for r in taps) == 30
+    assert any(r["error_code"] == "RATE_LIMITED" for r in taps)  # throttled attempts are audited too
+    metrics = httpx.get(f"{stack.url}/metrics").text
+    assert 'mphone_op_total{error_code="RATE_LIMITED",ok="false",op="input.tap"}' in metrics
+    assert "mphone_nodes_connected 1.0" in metrics

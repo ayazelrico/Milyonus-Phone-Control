@@ -1,0 +1,33 @@
+# The gateway's real HTTP/WebSocket tests against Postgres 16, schema from the migrations (A5.02, A5.22).
+name: gateway-postgres
+
+on:
+  pull_request:
+    paths: ["packages/**", "tests/e2e_fake/**", "tests/unit/gateway/**", ".github/workflows/gateway-postgres.yml"]
+  push:
+    branches: [main]
+    paths: ["packages/**", "tests/e2e_fake/**", "tests/unit/gateway/**"]
+
+jobs:
+  postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: mphone
+          POSTGRES_PASSWORD: mphone
+          POSTGRES_DB: mphone
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U mphone" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      MPHONE_TEST_DB_URL: postgresql+asyncpg://mphone:mphone@localhost:5432/mphone
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: uv run pytest -v -p no:randomly tests/unit/gateway tests/e2e_fake

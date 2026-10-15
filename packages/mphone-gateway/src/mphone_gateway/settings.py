@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     lease_max_ttl_s: int = 3600
     node_grace_s: int = 120
     op_timeout_s: float = 30.0
+    # Side-effecting ops only (taps, typing, navigation, app launches); reads are not limited.
+    agent_ops_per_second: int = 10
+    device_ops_per_second: int = 8
+    # Create tables at startup (development, tests). Production runs `mphone-gateway migrate` instead.
+    auto_create_schema: bool = True
 
     def db_url(self) -> str:
         return self.database_url or f"sqlite+aiosqlite:///{config.subdir('gateway') / 'gateway.db'}"

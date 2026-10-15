@@ -33,6 +33,7 @@ def main(argv: list[str] | None = None) -> int:
     serve = sub.add_parser("serve")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8080)
+    sub.add_parser("migrate", help="apply database migrations (production)")
     admin = sub.add_parser("admin")
     asub = admin.add_subparsers(dest="admin_command", required=True)
     ca = asub.add_parser("create-agent")
@@ -44,6 +45,12 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(sys.argv[1:] if argv is None else argv)
     if args.command == "admin":
         return asyncio.run(_admin(args))
+    if args.command == "migrate":
+        from .migrate import upgrade
+
+        upgrade()
+        print("✓ şema güncel")
+        return 0
     import uvicorn
 
     uvicorn.run(create_app(), host=args.host, port=args.port)

@@ -7,6 +7,7 @@ have raised. The gateway URL and API key come from MPHONE_GATEWAY / MPHONE_API_K
 """
 
 import os
+import time
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
@@ -15,6 +16,8 @@ import httpx
 from mphone_core import config
 from mphone_core.transport import Backend, OpCall
 from mphone_protocol import DeviceOffline, ErrorInfo, InvalidArgument, MphoneError, NeedsUser
+
+RATE_LIMIT_RETRIES = 3  # the gateway says how long to wait; waiting is better than failing the agent
 
 
 class RemoteBackend(Backend):
@@ -71,7 +74,7 @@ class RemoteBackend(Backend):
     def ops(self) -> list[str]:
         return list(self.device().get("ops", []))
 
-    def _invoke(self, call: OpCall) -> Any:
+    def _invoke(self, call: OpCall, attempt: int = 0) -> Any:
         kw = dict(call.kw)
         if call.op == "screen.capture":
             kw["path"] = None  # where to save is this machine's business, not the node's
@@ -86,7 +89,11 @@ class RemoteBackend(Backend):
             raise self._error(r)
         body = r.json()
         if not body.get("ok"):
-            raise MphoneError.from_info(ErrorInfo.model_validate(body.get("error")))
+            error = MphoneError.from_info(ErrorInfo.model_validate(body.get("error")))
+            if error.code == "RATE_LIMITED" and attempt < RATE_LIMIT_RETRIES:
+                time.sleep(int(error.details.get("retry_after_ms", 200)) / 1000)
+                return self._invoke(call, attempt + 1)
+            raise error
         result = body.get("result")
         if call.op == "screen.capture" and isinstance(result, dict) and call.kw.get("path"):
             import base64

@@ -27,6 +27,7 @@ dev = [
     "pre-commit>=4.0",
     "anthropic>=1.0",  # agent eval harness (tests/agent_eval) only
     "httpx>=0.27",
+    "asyncpg>=0.30",  # gateway tests against Postgres in CI (MPHONE_TEST_DB_URL)
 ]
 
 [tool.uv]

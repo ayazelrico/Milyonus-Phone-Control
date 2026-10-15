@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 from typing import Annotated, Any, cast
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,6 +35,8 @@ from mphone_protocol import (
 from . import auth, leases
 from .db import Agent, Database, Device, Lease, Node, OpLog, now
 from .hub import Hub
+from .limits import SlidingWindow
+from .metrics import Metrics
 from .settings import Settings
 
 POLICED = {
@@ -91,15 +93,21 @@ def create_app(settings: Settings | None = None, policy: Policy | None = None) -
     db = Database(settings.db_url())
     hub = Hub()
     active_policy = policy or Policy.load()
+    metrics = Metrics()
+    agent_limit = SlidingWindow(settings.agent_ops_per_second)
+    device_limit = SlidingWindow(settings.device_ops_per_second)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        await db.create_all()
+        if settings.auto_create_schema:
+            await db.create_all()
+        else:
+            await db.seed()  # schema comes from `mphone-gateway migrate`
         yield
         await db.dispose()
 
     app = FastAPI(title="mphone gateway", version="0.1.0", lifespan=lifespan)
-    app.state.db, app.state.hub, app.state.settings = db, hub, settings
+    app.state.db, app.state.hub, app.state.settings, app.state.metrics = db, hub, settings, metrics
 
     @app.exception_handler(MphoneError)
     async def protocol_error(request: Request, e: MphoneError) -> JSONResponse:
@@ -151,6 +159,11 @@ def create_app(settings: Settings | None = None, policy: Policy | None = None) -
 
     # --- health ---------------------------------------------------------------------------------
 
+    @app.get("/metrics")
+    async def prometheus() -> Response:
+        metrics.nodes.set(len(hub.nodes))
+        return Response(metrics.render(), media_type="text/plain; version=0.0.4")
+
     @app.get("/healthz")
     async def healthz() -> dict[str, Any]:
         return {"ok": True, "nodes_online": len(hub.nodes)}
@@ -172,7 +185,12 @@ def create_app(settings: Settings | None = None, policy: Policy | None = None) -
     async def create_lease(body: LeaseIn, s: Session, agent: LeaseAgent) -> dict[str, Any]:
         device = await visible_device(s, agent, body.device_id)
         ttl = min(body.ttl_s or settings.lease_default_ttl_s, settings.lease_max_ttl_s)
-        lease = await leases.acquire(s, agent, device, ttl, body.purpose)
+        try:
+            lease = await leases.acquire(s, agent, device, ttl, body.purpose)
+        except MphoneError:
+            metrics.leases.labels("conflict").inc()
+            raise
+        metrics.leases.labels("acquired").inc()
         return {"lease_id": lease.id, "device_id": device.id, "expires_at": lease.expires_at.isoformat()}
 
     @app.post("/v1/leases/{lease_id}/heartbeat")
@@ -221,6 +239,9 @@ def create_app(settings: Settings | None = None, policy: Policy | None = None) -
                 raise InvalidArgument(f"unknown op {body.op!r}")
             if body.op not in device.ops:
                 raise Unsupported(f"{device.id} cannot {body.op!r}")
+            if spec.side_effect != "none":  # reads are harmless; only acting on the phone is limited
+                agent_limit.check(agent.id, "this agent")
+                device_limit.check(device.id, "this device")
             try:
                 kw = spec.args_model.model_validate(body.kw).model_dump(by_alias=True)
             except ValidationError as e:
@@ -245,6 +266,8 @@ def create_app(settings: Settings | None = None, policy: Policy | None = None) -
             )
         )
         await s.commit()
+        metrics.ops.labels(body.op, str(error is None).lower(), error.code if error else "").inc()
+        metrics.op_seconds.labels(body.op).observe(time.monotonic() - start)
         if error is not None:
             return {"ok": False, "error": error.to_info().model_dump()}
         return {"ok": True, "result": result}
@@ -277,6 +300,7 @@ def create_app(settings: Settings | None = None, policy: Policy | None = None) -
             )[0]
         decision = evaluate(active_policy, call, read, mode="remote", trust_level=agent.trust_level)
         rule = decision.rule.id if decision.rule else None
+        metrics.policy.labels(rule or "", decision.decision).inc()
         details = {"rule": rule, "op": op, "target": (decision.target or {}).get("text")}
         if decision.decision == "deny":
             raise PolicyDenied(decision.message, details=details)
