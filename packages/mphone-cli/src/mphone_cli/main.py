@@ -1,4 +1,4 @@
-"""The `mphone` command (A2.13, A2.14; `run`, `mcp`, `skill` arrive in P3)."""
+"""The `mphone` command: run, mcp, skill, doctor, android (A2.13, A2.14, A3.01, A3.05, A3.08)."""
 
 import argparse
 import sys
@@ -30,6 +30,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="kullanıcının AÇIKÇA onayladığı politika kuralı (ör. outward-send); tekrarlanabilir",
     )
     r.add_argument("--trust", default="standard", choices=["low", "standard", "high"])
+
+    sub.add_parser("mcp", help="MCP sunucusunu stdio üzerinde başlat (agent'lar için)")
+    sub.add_parser("skill", help="agent yönergesini (SKILL.md) yazdır")
 
     d = sub.add_parser("doctor", help="bağlantı zincirini teşhis et")
     d.add_argument("platform", nargs="?", default="android", choices=["android", "ios"])
@@ -77,6 +80,17 @@ def main(argv: list[str] | None = None) -> int:
             for warning in result.warnings:
                 print(f"! {warning}", file=sys.stderr)
             return result.exit_code
+        if args.command in ("mcp", "skill"):
+            try:
+                from mphone_mcp import server
+            except ImportError:
+                print("mphone-mcp kurulu değil: `uv tool install mphone-mcp`", file=sys.stderr)
+                return 2
+            if args.command == "skill":
+                sys.stdout.write(server.skill_text())
+                return 0
+            server.main()
+            return 0
         if args.command == "doctor":
             from mphone_cli import doctor
 
