@@ -52,4 +52,7 @@ jobs:
         if: always()
         with:
           name: e2e-api${{ matrix.api }}
-          path: e2e-api${{ matrix.api }}.xml
+          path: |
+            e2e-api${{ matrix.api }}.xml
+            e2e-artifacts/
+          if-no-files-found: ignore

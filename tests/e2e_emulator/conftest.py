@@ -64,8 +64,30 @@ def phone(ime_installed: None) -> Iterator[Phone]:
     device.close()
 
 
+ARTIFACTS = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "e2e-artifacts")
+
+
+def diagnose(phone: Phone, name: str) -> str:
+    """What was actually on screen: current app, visible text, and a screenshot kept for CI."""
+    os.makedirs(ARTIFACTS, exist_ok=True)
+    try:
+        shot = phone.screenshot(os.path.join(ARTIFACTS, f"{name}.png"))
+    except Exception as e:
+        shot = f"(no screenshot: {e})"
+    try:
+        texts = phone.screen_text()[:40]
+    except Exception as e:
+        texts = [f"(no screen text: {e})"]
+    try:
+        app = phone.current_app()
+    except Exception as e:
+        app = f"(no app: {e})"
+    return f"current app={app}; visible={texts}; screenshot={shot}"
+
+
 @pytest.fixture
-def test_screen(phone: Phone) -> Phone:
+def test_screen(phone: Phone, request: pytest.FixtureRequest) -> Phone:
     phone.open_app(TEST_PKG, fresh=True)
-    assert phone.wait_for_text("Gönder", timeout=15) is not None
+    if phone.wait_for_text("Gönder", timeout=15) is None:
+        pytest.fail(f"test screen did not open — {diagnose(phone, request.node.name)}")
     return phone

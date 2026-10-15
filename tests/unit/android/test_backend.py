@@ -229,10 +229,19 @@ def test_ime_not_listening_yet_is_retried(monkeypatch: pytest.MonkeyPatch) -> No
     assert sum("INPUT_B64" in c for c in adb.calls) == 3
 
 
-def test_ime_reports_no_focused_field() -> None:
+def test_early_no_field_after_a_switch_is_retried(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    adb = ScriptedAdb(ime_results=[2, 1])  # the new IME had not bound to the field yet
+    assert make(adb).send("input.text", s="Şule")["mode_used"] == "ime"
+
+
+def test_ime_reports_no_focused_field(monkeypatch: pytest.MonkeyPatch) -> None:
     from mphone_protocol import NotFound
 
-    adb = ScriptedAdb(ime_results=[2])
+    clock = iter(range(0, 1000))
+    monkeypatch.setattr("time.monotonic", lambda: float(next(clock)))
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    adb = ScriptedAdb(ime_results=[2] * 50)
     with pytest.raises(NotFound) as e:
         make(adb).send("input.text", s="Şule")
     assert e.value.user_action and "dokunun" in e.value.user_action

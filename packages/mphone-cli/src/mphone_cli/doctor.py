@@ -85,7 +85,11 @@ def android_steps(target: str = "", write_test: bool = False) -> list[Step]:
             device.send("apps.launch", name="com.milyonus.mphone.ime", fresh=True)
             field = device.send("ui.find", selector={"resource_id": "mphone_text"})
             if not field:
-                raise RuntimeError("test ekranı açılmadı (mphone IME debug APK gerekli)")
+                visible = [b["text"] for b in device.send("screen.text")][:25]
+                current = device.send("apps.current")
+                raise RuntimeError(
+                    f"test ekranı açılmadı (mphone IME debug APK gerekli); önde: {current}; görünen: {visible}"
+                )
             device.send("input.tap", x=field[0]["x"], y=field[0]["y"])
             device.send("input.text", s=text)
             got = device.send("ui.find", selector={"resource_id": "mphone_text"})[0]["text"]

@@ -58,6 +58,7 @@ LOCKED_ACTION = "Telefonun kilidini açın; PIN asla otomatik yazılmaz. Sonra a
 UI_DUMP = "/sdcard/mphone_ui.xml"
 GATE_TTL = 2.0
 TREE_BACKOFF = 10.0
+IME_NO_FIELD_GRACE = 3.0
 IME_BIND_TIMEOUT = 10.0  # a slow emulator took > 5 s to create the IME service (E2E, API 34)
 
 
@@ -451,17 +452,20 @@ class AndroidAdb(Backend):
                 time.sleep(1.0)
                 self._sh(command)
                 return
-            deadline = time.monotonic() + IME_BIND_TIMEOUT
+            start = time.monotonic()
             while True:
                 code = broadcast_result(self._sh(command))
                 if code == RESULT_DONE:
                     return
-                if code == RESULT_NO_FIELD:
+                waited = time.monotonic() - start
+                # Right after a keyboard switch the new IME can answer "no field" before it has
+                # bound to the focused one (E2E, API 30): only trust NO_FIELD after a grace period.
+                if code == RESULT_NO_FIELD and waited >= IME_NO_FIELD_GRACE:
                     raise NotFound(
                         "no text field is focused, so the text went nowhere",
                         user_action="Önce metin alanına dokunun (tap_text / tap_ui), sonra yazın.",
                     )
-                if time.monotonic() >= deadline:
+                if waited >= IME_BIND_TIMEOUT:
                     raise InternalError(
                         f"the mphone keyboard did not answer within {IME_BIND_TIMEOUT:g}s (result={code})"
                     )

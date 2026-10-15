@@ -114,7 +114,7 @@ def test_zz_locked_phone_refuses_and_sends_no_touch(phone: Phone) -> None:
         with pytest.raises(DeviceLocked):
             phone.type_text("1234")
     finally:
-        run("locksettings", "clear", "--old", "1234")
+        cleared = run("locksettings", "clear", "--old", "1234").stdout.strip()
         for key, value in (
             ("lock_screen_lock_after_timeout", before_timeout),
             ("lockscreen.disabled", before_disabled),
@@ -123,17 +123,21 @@ def test_zz_locked_phone_refuses_and_sends_no_touch(phone: Phone) -> None:
                 run("settings", "delete", "secure", key)
             else:
                 run("settings", "put", "secure", key, value)
-        for _ in range(10):  # a swipe keyguard can outlive the PIN: dismiss until it is gone
+        trail: list[str] = []
+        for attempt in range(10):  # a swipe keyguard can outlive the PIN: dismiss until it is gone
+            if attempt % 3 == 0:  # redraw the keyguard under the restored settings
+                run("input", "keyevent", "KEYCODE_SLEEP")
+                time.sleep(1)
             run("input", "keyevent", "KEYCODE_WAKEUP")
-            run("wm", "dismiss-keyguard")
+            trail.append(run("wm", "dismiss-keyguard").stdout.strip())
             run("input", "keyevent", "82")
-            run(
-                "input", "swipe", "540", "2000", "540", "600", "300"
-            )  # a swipe keyguard needs a swipe (API 30)
+            run("input", "swipe", "540", "2000", "540", "600", "300")  # a swipe keyguard needs a swipe
             time.sleep(1)
             if "isKeyguardShowing=false" in run("dumpsys", "window").stdout:
                 break
         else:
+            state = run("locksettings", "get-disabled").stdout.strip()
             pytest.fail(
-                "could not unlock the emulator after the lock test; later tests would see a locked phone"
+                "could not unlock the emulator after the lock test; later tests would see a locked phone "
+                f"(clear: {cleared!r}; get-disabled: {state!r}; dismiss: {trail[-3:]!r})"
             )
