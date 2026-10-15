@@ -58,7 +58,7 @@ LOCKED_ACTION = "Telefonun kilidini açın; PIN asla otomatik yazılmaz. Sonra a
 UI_DUMP = "/sdcard/mphone_ui.xml"
 GATE_TTL = 2.0
 TREE_BACKOFF = 10.0
-IME_BIND_TIMEOUT = 5.0
+IME_BIND_TIMEOUT = 10.0  # a slow emulator took > 5 s to create the IME service (E2E, API 34)
 
 
 class PrimaryUnreachable(DeviceOffline):

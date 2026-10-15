@@ -127,6 +127,9 @@ def test_zz_locked_phone_refuses_and_sends_no_touch(phone: Phone) -> None:
             run("input", "keyevent", "KEYCODE_WAKEUP")
             run("wm", "dismiss-keyguard")
             run("input", "keyevent", "82")
+            run(
+                "input", "swipe", "540", "2000", "540", "600", "300"
+            )  # a swipe keyguard needs a swipe (API 30)
             time.sleep(1)
             if "isKeyguardShowing=false" in run("dumpsys", "window").stdout:
                 break

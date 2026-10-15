@@ -327,3 +327,25 @@ def test_unsupported_is_honest() -> None:
     assert not p.supports("nav.back")
     with pytest.raises(Unsupported):
         p.back()
+
+
+EDGE_TO_EDGE = {  # gesture navigation: the list runs to the bottom edge (E2E, API 34 missed "Öğe 200")
+    "start": "s",
+    "screens": {
+        "s": {
+            "app": "com.fake.list",
+            "list": {
+                "top": 200,
+                "bottom": 2390,
+                "row_h": 150,
+                "items": {"pattern": "Satır {i}", "count": 40},
+            },
+        }
+    },
+}
+
+
+def test_scroll_collect_reaches_a_last_row_at_the_bottom_edge() -> None:
+    p = Phone(FakeBackend(EDGE_TO_EDGE), clock=VirtualClock())
+    res = p.scroll_collect()
+    assert res["items"][-1] == "Satır 40" and len(res["items"]) == 40

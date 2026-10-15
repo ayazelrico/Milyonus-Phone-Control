@@ -32,9 +32,11 @@ HumanHandler = Callable[[Literal["human", "approval"], str, float], bool]
 
 _OPPOSITE: dict[str, Direction] = {"down": "up", "up": "down", "left": "right", "right": "left"}
 
-# Scroll-end detection ignores the status bar (a ticking clock) and the navigation strip:
-# otherwise the clock changing a minute reads as movement and the end is never found.
-CONTENT_TOP, CONTENT_BOTTOM = 0.06, 0.92
+# Scroll-end detection ignores the status bar (a ticking clock) and the gesture handle at the very
+# bottom: otherwise the clock changing a minute reads as movement and the end is never found. The
+# bottom margin is thin on purpose: with gesture navigation (Android 10+) lists run to the bottom
+# edge, and a wider margin hid the last row of a list (E2E, API 34: "Öğe 200" missed).
+CONTENT_TOP, CONTENT_BOTTOM = 0.06, 0.985
 
 
 def _tty_handler(kind: Literal["human", "approval"], text: str, timeout: float) -> bool:
