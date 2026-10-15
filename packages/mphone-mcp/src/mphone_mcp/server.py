@@ -58,6 +58,7 @@ class Lease:
 class State:
     def __init__(self) -> None:
         self.leases: dict[str, Lease] = {}
+        self.released: list[Lease] = []  # kept so evals can inspect a phone after the agent let go
 
     def get(self, lease_id: str) -> Lease:
         lease = self.leases.get(lease_id)
@@ -74,6 +75,7 @@ class State:
         if lease is not None:
             lease.phone.backend.close()
             lease.lock.release()
+            self.released.append(lease)
 
 
 def _fail(e: MphoneError) -> ToolError:
