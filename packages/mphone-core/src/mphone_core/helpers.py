@@ -30,9 +30,13 @@ Direction = Literal["up", "down", "left", "right"]
 At = tuple[int, int] | Box | None
 HumanHandler = Callable[[Literal["human", "approval"], str, float], bool]
 
-# Scroll-end detection ignores the status bar (a ticking clock) and the navigation strip:
-# otherwise the clock changing a minute reads as movement and the end is never found.
-CONTENT_TOP, CONTENT_BOTTOM = 0.06, 0.92
+_OPPOSITE: dict[str, Direction] = {"down": "up", "up": "down", "left": "right", "right": "left"}
+
+# Scroll-end detection ignores the status bar (a ticking clock) and the gesture handle at the very
+# bottom: otherwise the clock changing a minute reads as movement and the end is never found. The
+# bottom margin is thin on purpose: with gesture navigation (Android 10+) lists run to the bottom
+# edge, and a wider margin hid the last row of a list (E2E, API 34: "Öğe 200" missed).
+CONTENT_TOP, CONTENT_BOTTOM = 0.06, 0.985
 
 
 def _tty_handler(kind: Literal["human", "approval"], text: str, timeout: float) -> bool:
@@ -356,11 +360,30 @@ class Phone:
                     new += 1
             return new
 
-        ingest(self._content())
+        def screen_keys(boxes: list[Box]) -> set[Hashable]:
+            return {key_fn(item) for item in extract_fn(boxes)}
+
+        first = self._content()
+        ingest(first)
+        last_keys = screen_keys(first)
         stale = 0
         for i in range(1, max_scrolls + 1):
             res = self.scroll_screen(direction, amount, settle, at)
-            new = ingest(res["boxes"])
+            boxes = res["boxes"]
+            keys = screen_keys(boxes)
+            if res["moved"] and amount < 1 and last_keys and keys and not keys & last_keys:
+                # None of this screen's items were on the previous one: the list moved further
+                # than asked (a fling) and rows may have been skipped. Step back until the screens
+                # overlap again, so items stay complete AND in order (PITFALLS#scroll-overshoot).
+                boxes = (
+                    self._recover_gap(
+                        lambda b, prev=last_keys: bool(screen_keys(b) & prev), direction, amount, settle, at
+                    )
+                    or boxes
+                )
+                keys = screen_keys(boxes)
+            last_keys = keys or last_keys
+            new = ingest(boxes)
             if on_progress:
                 on_progress(i, len(items), new)
             stale = 0 if new else stale + 1
@@ -369,6 +392,22 @@ class Phone:
             if not new:
                 self.clock.sleep(0.8)  # extra grace for a slow lazy-load
         return {"items": items, "stop": "max-scrolls", "scrolls": max_scrolls}
+
+    def _recover_gap(
+        self,
+        overlaps: Callable[[list[Box]], bool],
+        direction: Direction,
+        amount: float,
+        settle: float,
+        at: At,
+        tries: int = 4,
+    ) -> list[Box] | None:
+        back: Direction = _OPPOSITE[direction]
+        for _ in range(tries):
+            res = self.scroll_screen(back, amount / 2, settle, at)
+            if overlaps(res["boxes"]):
+                return res["boxes"]
+        return None
 
     # --- waiting ------------------------------------------------------------
 

@@ -58,6 +58,7 @@ exclude = ["*.md"]  # docs hold illustrative snippets, not code to format
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "S"]
 ignore = [
     "S101",   # assert is fine in tests and for invariants
+    "E501",   # ruff format owns line width; what remains is unbreakable user-facing text
     "S603",   # subprocess without shell is our standard (CLAUDE.md §8.1)
     "S607",   # adb/xcrun are resolved from PATH by design
     "RUF001", # Turkish characters in strings are intentional

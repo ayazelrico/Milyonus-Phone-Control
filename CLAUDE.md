@@ -267,6 +267,9 @@ Protokol = `packages/mphone-protocol/schema/ops.v1.json`. Her şey buradan türe
 | Gerçek cihazda "gönder"e basan test | `apps/test-app` veya fake |
 | Kapsam dışı refaktörü kaleme sıkıştırmak | Plan-Actions.md'ye yeni kalem öner |
 | Testler kırmızıyken "bitti" demek | Durumu dürüstçe raporla, çıktıyı göster |
+| Alt dizin `conftest.py`'de kapsamsız `pytest_collection_modifyitems` | Hook tüm oturumu görür; öğeleri dizine göre süz (tüm testler sessizce atlanabilir) |
+| Ham fixture'ları biçimlendiren/düzelten araçlar | `tests/fixtures/android/` bayt düzeyinde korunur; hook'lardan hariç, elle düzenlenmez, yeniden toplanır |
+| adb çıktı formatını hafızadan varsaymak | `tools/android/capture_fixtures.sh` ile emülatörden topla, fixture'a karşı yaz |
 
 ---
 

@@ -14,6 +14,7 @@ from typing import Any
 import pytest
 from jsonschema import Draft202012Validator
 
+from mphone_backends.android_adb.backend import AndroidAdb
 from mphone_backends.fake import FakeBackend, from_uri
 from mphone_core.clock import VirtualClock
 from mphone_core.helpers import Phone
@@ -22,7 +23,7 @@ from mphone_protocol import OP_NAMES, OP_SPECS, result_schema
 
 ROOT = Path(__file__).resolve().parents[2]
 HELPERS = ROOT / "packages/mphone-core/src/mphone_core/helpers.py"
-BACKENDS: list[type[Backend]] = [FakeBackend]  # android_adb joins in P2, ios_mirroring in P4
+BACKENDS: list[type[Backend]] = [FakeBackend, AndroidAdb]  # ios_mirroring joins in P4
 
 
 def sent_by_helpers() -> dict[str, set[str]]:

@@ -1,10 +1,14 @@
 # pre-commit install && pre-commit install --hook-type commit-msg
+default_stages: [pre-commit]
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
       - id: end-of-file-fixer
+        exclude: ^tests/fixtures/android/  # raw captured output: byte-exact on purpose
       - id: trailing-whitespace
+        exclude: ^tests/fixtures/android/
         args: [--markdown-linebreak-ext=md]
       - id: check-yaml
       - id: check-toml

@@ -196,6 +196,14 @@ def test_scroll_collect_gathers_all_120_without_duplicates(fake_phone: FakePhone
     assert progress[-1][1] == 120
 
 
+def test_scroll_collect_recovers_rows_skipped_by_a_fling(fake_phone: FakePhone) -> None:
+    p = fake_phone("long_list_120")
+    p.open_app("Fırlayan")
+    res = p.scroll_collect(extract=lambda boxes: [b["text"] for b in boxes if b["text"].startswith("Satır")])
+    assert res["stop"] == "reached-end"
+    assert res["items"] == [f"Satır {i}" for i in range(1, 121)]  # complete and in order
+
+
 def test_scroll_collect_respects_max_scrolls(fake_phone: FakePhone) -> None:
     res = fake_phone("long_list_120").scroll_collect(max_scrolls=3)
     assert res["stop"] == "max-scrolls"
@@ -319,3 +327,25 @@ def test_unsupported_is_honest() -> None:
     assert not p.supports("nav.back")
     with pytest.raises(Unsupported):
         p.back()
+
+
+EDGE_TO_EDGE = {  # gesture navigation: the list runs to the bottom edge (E2E, API 34 missed "Öğe 200")
+    "start": "s",
+    "screens": {
+        "s": {
+            "app": "com.fake.list",
+            "list": {
+                "top": 200,
+                "bottom": 2390,
+                "row_h": 150,
+                "items": {"pattern": "Satır {i}", "count": 40},
+            },
+        }
+    },
+}
+
+
+def test_scroll_collect_reaches_a_last_row_at_the_bottom_edge() -> None:
+    p = Phone(FakeBackend(EDGE_TO_EDGE), clock=VirtualClock())
+    res = p.scroll_collect()
+    assert res["items"][-1] == "Satır 40" and len(res["items"]) == 40

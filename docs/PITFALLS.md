@@ -30,13 +30,14 @@
 - **Belirti:** Kilit ekranına dokunuşlar gidiyor; PIN pedi açılıyor; hiçbir hata yok.
 - **Neden:** adb kilitli ekrana da girdi gönderir.
 - **Çözüm:** Her girdi op'undan önce durum kapısı: `dumpsys power | grep mWakefulness` + `dumpsys window | grep isKeyguardShowing` (2 sn önbellek). Uyku → `KEYCODE_WAKEUP`; kilitli → `DEVICE_LOCKED`, **hiçbir** dokunuş gönderilmez. PIN asla yazılmaz.
-- **Test:** TODO A2.03 (adb çağrı kaydıyla "kilitliyken input komutu yok").
+- **Test:** `test_backend.py::test_locked_phone_gets_no_touch`, E2E `test_locked_phone_refuses_and_sends_no_touch`.
 
 ### android-ascii-only-text
 - **Belirti:** `type_text("Çağrı")` boş, bozuk veya hatalı yazıyor.
 - **Neden:** `adb shell input text` yalnızca ASCII destekler.
 - **Çözüm:** `input.text` `mode=auto` → IME yolu (ADBKeyboard `ADB_INPUT_B64` / Companion IME). ADR-0009.
-- **Test:** TODO A2.08 (100 Türkçe cümle + emoji).
+- **Kanıt:** API 30 ve 34'te `input text 'çağrı'` → `NullPointerException`, çıkış kodu 1 / 255 (`tests/fixtures/android/*/input_text_turkish.*`).
+- **Test:** `test_parse_fixtures.py::test_input_text_cannot_type_turkish`, `test_backend.py::test_turkish_text_switches_to_the_ime_and_back`, E2E `test_turkish_text_round_trip`.
 
 ### android-input-text-escaping
 - **Belirti:** Boşluklar kayboluyor, `&`, `;`, `(`, `'` gibi karakterler komutu bozuyor.
@@ -48,7 +49,7 @@
 - **Belirti:** "more than one device/emulator" hatası; tek telefon bağlı olmasına rağmen.
 - **Neden:** Wi-Fi adb aynı telefonu hem `ip:port` hem mDNS adıyla listeleyebilir.
 - **Çözüm:** Her komutta `-s SERIAL`; keşifte `ro.serialno` ile birleştir.
-- **Test:** TODO A2.02 (fixture).
+- **Test:** `test_backend.py::test_commands_are_pinned_after_resolve`, `test_parse_fixtures.py::test_devices_states_and_transports`.
 
 ### android-wireless-debug-resets
 - **Belirti:** Yeniden başlatmadan sonra Wi-Fi telefon bulunamıyor.
@@ -60,19 +61,20 @@
 - **Belirti:** Agent yanlış telefonda (yanlış hesapta) işlem yaptı.
 - **Neden:** Birincil telefon ulaşılamayınca "ilk bulunan" telefona düşmek.
 - **Çözüm:** **Kırmızı çizgi:** birincil/kiralanan cihaz yoksa hata (`PrimaryUnreachable` / `DEVICE_OFFLINE`). CLAUDE.md §6.2.
-- **Test:** TODO A2.02, A5.22.
+- **Test:** `test_backend.py::test_unreachable_primary_is_an_error_not_another_phone`, `test_explicit_serial_is_never_substituted`; uzak: TODO A5.22.
 
 ### android-scroll-vs-swipe
 - **Belirti:** Liste gezerken satırlar atlanıyor.
 - **Neden:** `input swipe` kısa sürede flick üretir, liste momentumla kayar.
 - **Çözüm:** `scroll` = `input motionevent` DOWN/MOVE/UP, sonda ~80 ms duraklama (fling'i öldürür), her seferinde aynı mesafe. `swipe` yalnızca "sonraki video/sayfa" için.
-- **Test:** TODO A2.07 (mesafe ±%5).
+- **Test:** `test_backend.py::test_scroll_has_no_momentum_and_moves_the_finger_against_the_content`, E2E `test_scroll_collect_walks_200_rows_in_order`.
 
 ### android-motionevent-missing
 - **Belirti:** `input motionevent` "Unknown command".
 - **Neden:** Eski Android sürümlerinde yok.
 - **Çözüm:** Destek tespiti (önbellekli) → yedek: uzun süreli `input swipe`.
-- **Test:** TODO A2.07.
+- **Kanıt:** API 30 ve 34 `input` yardımında `motionevent` var.
+- **Test:** `test_parse_fixtures.py::test_motionevent_is_available`.
 
 ### android-screenshot-equals-tap-space
 - **Belirti:** —
@@ -102,6 +104,56 @@
 - **Neden:** `FLAG_SECURE`.
 - **Çözüm:** Hata değil; `details.secure=true` ile bildir. Ağaç yine okunabilir olabilir.
 - **Test:** TODO A2.16 (test uygulamasında secure ekran).
+
+### android-uiautomator-dev-tty
+- **Belirti:** Ağaç her zaman boş; çıktı yalnızca `UI hierchary dumped to: /dev/tty`.
+- **Neden:** İnternetteki yaygın tarif `uiautomator dump /dev/tty`, etkileşimsiz `adb shell` altında tty olmadığı için XML'i hiç vermiyor (API 30 ve 34'te kanıtlandı, çıkış kodu 0).
+- **Çözüm:** Dosyaya dök, oku, sil: `uiautomator dump /sdcard/mphone_ui.xml; cat …; rm -f …`.
+- **Test:** `tests/unit/android/test_parse_fixtures.py::test_dev_tty_dump_has_no_xml`, `test_backend.py::test_tree_dumps_to_a_file_never_dev_tty`.
+
+### android-dozing-is-asleep
+- **Belirti:** Ekran kapalıyken backend telefonu "uyanık" sanıyor; dokunuşlar boşa gidiyor.
+- **Neden:** `KEYCODE_SLEEP` sonrası API 30 `mWakefulness=Asleep`, API 34 aynı imajda kimi zaman `Asleep`, kimi zaman `Dozing` diyor. API 34'te `Display Power: state=` satırı da yok.
+- **Çözüm:** Yalnızca `Awake` uyanıktır; diğer her değer (Asleep, Dozing, Dreaming, yok) uyandırma gerektirir.
+- **Test:** `test_parse_fixtures.py::test_wakefulness`, `test_backend.py::test_asleep_is_woken_then_driven`.
+
+### android-hint-as-text
+- **Belirti:** Boş bir metin alanı ağaçta `text="Metin"` gösteriyor; "alan dolu" sanılıyor.
+- **Neden:** uiautomator boş EditText için ipucunu (hint) `text` olarak raporluyor (API 30 ve 34).
+- **Çözüm:** Alanın değerini doğrularken beklenen değerle karşılaştır; "boş mu" sorusunda ipucunu da boş say.
+- **Test:** `test_parse_fixtures.py::test_uiautomator_test_screen`.
+
+### android-ime-async
+- **Belirti:** `ime enable` kurulumdan hemen sonra `Unknown input method … cannot be enabled` diyor; hemen ardından `ime list` klavyeyi gösteriyor.
+- **Neden:** Giriş yöntemi servisi yeni paketi eşzamansız tarıyor.
+- **Çözüm:** Kurulumdan sonra `ime list -a -s` klavyeyi gösterene kadar bekle (en çok 30 sn), sonra etkinleştir.
+- **Test:** `tests/e2e_emulator/conftest.py::ime_installed`; capture betiği `ime_wait_seconds`.
+
+### android-emulator-lockscreen-disabled
+- **Belirti:** Emülatörde PIN koyup ekranı kapatıp açınca kilit ekranı gelmiyor; `isKeyguardShowing=false`.
+- **Neden:** (1) Güvenli kilit, ekran kapandıktan `lock_screen_lock_after_timeout` (varsayılan 5 sn) sonra devreye giriyor; (2) emülatör imajlarında kilit ekranı sistem düzeyinde kapalı gelebiliyor.
+- **Çözüm:** Testte `locksettings set-disabled false`, gecikmeyi 0 yap, uyut, ≥ 7 sn bekle, keyguard'ı yokla; sonra eski değerleri geri yükle. Gerçek telefonlarda bu ayarlara dokunulmaz.
+- **Test:** `tests/e2e_emulator/test_android_e2e.py::test_locked_phone_refuses_and_sends_no_touch`.
+
+### android-ime-first-bind
+- **Belirti:** Android 14'te ilk Türkçe `type_text` alanı boş bırakıyor; sonraki çağrılar çalışıyor (E2E, API 34).
+- **Neden:** `ime set` sonrası klavye servisi eşzamansız oluşturuluyor; broadcast o anda gönderilirse dinleyen yok (`result=0`).
+- **Çözüm:** mphone klavyesi sıralı yayına sonuç kodu döner (1 yazıldı, 2 odaklı alan yok); backend 0 geldikçe 5 sn'ye kadar yeniden dener, 2'de `NotFound` verir. Metin sessizce kaybolmaz.
+- **Test:** `test_backend.py::test_ime_not_listening_yet_is_retried`, `test_ime_reports_no_focused_field`; E2E `test_typing_without_a_focused_field_is_an_error_not_silence`.
+
+### scroll-overshoot
+- **Belirti:** `scroll_collect` bir listede 2 satırı atladı (Öğe 85, 86) — API 34 E2E.
+- **Neden:** `motionevent` ile momentumsuz kaydırma bile bir kez fırladı: parmak kalkmadan önceki bekleme hız ölçeri sıfırlamaya yetmedi.
+- **Çözüm:** (1) Android: kaldırmadan önce aynı noktada iki durağan MOVE. (2) Platformdan bağımsız: `scroll_collect`, yeni ekranın öğeleri öncekiyle hiç örtüşmüyorsa yarım adım geri gidip örtüşen ekrandan devam eder — öğeler eksiksiz ve sıralı kalır. Sabit başlıklar örtüşme sayılmasın diye kontrol ekstraktörün öğeleri üzerinden yapılır.
+- **Test:** `test_helpers_fake.py::test_scroll_collect_recovers_rows_skipped_by_a_fling` (fake `overshoot`), E2E `test_scroll_collect_walks_200_rows_in_order`.
+
+## OCR
+
+### ocr-comma-below
+- **Belirti:** OCR'ın okuduğu "titreşim" ekrandakiyle aynı görünüyor ama `tap_text("titreşim", exact=True)` bulamıyor.
+- **Neden:** Apple Vision Türkçe **ş** (U+015F, çengelli) harfini Romence **ș** (U+0219, virgüllü) olarak okudu (rendered "Ses ve titreşim"). Ayrıca "Ağ" → "Ag" (breve kaçtı).
+- **Çözüm:** Her OCR kutusu `ocr.normalize_text` ile ș→ş, Ș→Ş, ț→ţ'ye çevrilir. Kaçan aksanları `textnorm.match` 4. seviyesi (aksansız) tolere eder.
+- **Test:** `tests/unit/test_ocr_registry.py::test_comma_below_lookalikes_become_turkish`, `tests/unit/ocr/test_vision.py`.
 
 ## iOS — iPhone Mirroring
 

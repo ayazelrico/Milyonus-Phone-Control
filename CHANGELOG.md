@@ -9,6 +9,10 @@ Protokol sürümü (`ops.v1`) paket sürümünden bağımsızdır (Plan.md §7.6
 - Lisans Apache-2.0 (LICENSE, NOTICE); repo public; Q1–Q13 kesinleşti; `main` branch koruması (karar kaydı).
 
 ### Added
+- P2: Android (adb) backend `AndroidAdb`: cihaz seçimi (USB > emülatör > Wi-Fi, birincil telefon asla ikamesiz), kilit/uyku kapısı, dosya tabanlı ağaç, OCR yedeği, momentumsuz kaydırma, uygulama adı çözümleme (TR/EN), bildirimler, dosya aktarımı (A2.01–A2.12).
+- P2: `apps/android-ime` — Türkçe/emoji için kendi klavyemiz (Apache-2.0; ADBKeyboard GPL-2.0 olduğu için); yalnızca adb shell/sistem yazdırabilir (DUMP izni). Debug APK'da E2E test ekranı (A2.08, A2.09, A2.16).
+- P2: `mphone doctor android [--write-test]`, `mphone android devices|pair|use|ime|awake` (A2.13, A2.14).
+- P2: Emülatörden ham adb çıktısı toplayan iş akışı ve bayt düzeyinde fixture'lar (API 30, 34); E2E emülatör iş akışı (A2.15).
 - P0: uv workspace iskeleti (9 paket), ruff/pyright/pytest/pre-commit yapılandırması, CI (A0.01–A0.03).
 - P0: ADR-0001…0015, PITFALLS.md v0, karar kaydı, cihaz hazırlık rehberi, referans proje notları (A0.04–A0.09).
 - P0: `tools/bump_version.py` ve bu değişiklik günlüğü (A0.10).
