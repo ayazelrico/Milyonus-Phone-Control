@@ -9,6 +9,9 @@ Protokol sürümü (`ops.v1`) paket sürümünden bağımsızdır (Plan.md §7.6
 - Lisans Apache-2.0 (LICENSE, NOTICE); repo public; Q1–Q13 kesinleşti; `main` branch koruması (karar kaydı).
 
 ### Added
+- P5: Gateway (FastAPI + SQLAlchemy; SQLite/Postgres): API anahtarları + kapsamlar, node kaydı, cihaz kaydı, kiralama (veritabanı düzeyinde tek aktif kiralama), op hattı (kiralama → şema → politika → node → audit), maskeli audit, etiket kısıtlı agent'lar (A5.01–A5.05, A5.11, A5.13–A5.15).
+- P5: Node daemon (`mphone-node enroll|run`): gateway'e dışa doğru WebSocket, telefon başına sıralı op, kopmada üstel yeniden bağlanma (A5.06–A5.10).
+- P5: Uzak backend `gw://DEVICE?lease=…`: aynı helper'lar gateway üzerinden (A5.16). Docker'sız uçtan uca testler (A5.22).
 - P3: `mphone run` — alt süreçte script; gizli ortam değişkenleri temizlenir, zaman aşımı süreç grubunu öldürür, çıktı 50 KB'a kırpılır, her op audit'e (yazılan metin maskeli) (A3.01–A3.02).
 - P3: Yerel kiralama (dosya kilidi; sahibini söyler) (A3.03).
 - P3: Politika motoru (YAML, en katı karar kazanır): parola alanına yazma ve kod benzeri girdiler reddedilir; gönder/öde/sil onay ister; `--allow KURAL` (A3.04).

@@ -292,3 +292,82 @@ The coordinate space of every op: device-local, 1:1 with screen.capture pixels.
 | `error` | `ErrorInfo | None` |  |
 | `duration_ms` | `int` |  |
 | `artifacts` | `list[ArtifactRef]` |  |
+
+### NodeDevice
+
+A phone as a node reports it. local_id is the node's own name for it (android:SERIAL).
+
+| Alan | Tip | Zorunlu |
+|---|---|---|
+| `local_id` | `str` | ✓ |
+| `platform` | `Literal["android", "ios", "fake"]` | ✓ |
+| `model` | `str | None` |  |
+| `os_version` | `str | None` |  |
+| `state` | `DeviceState` | ✓ |
+| `transport` | `str | None` |  |
+| `ops` | `list[str]` |  |
+
+### NodeHello
+
+node → gateway, first message after connecting.
+
+| Alan | Tip | Zorunlu |
+|---|---|---|
+| `t` | `Literal["hello"]` | ✓ |
+| `version` | `str` | ✓ |
+| `protocol` | `str` | ✓ |
+| `devices` | `list[NodeDevice]` |  |
+
+### NodeDeviceUpdate
+
+node → gateway: a phone appeared or changed state.
+
+| Alan | Tip | Zorunlu |
+|---|---|---|
+| `t` | `Literal["device.update"]` | ✓ |
+| `device` | `NodeDevice` | ✓ |
+
+### NodeDeviceGone
+
+node → gateway: a phone disappeared.
+
+| Alan | Tip | Zorunlu |
+|---|---|---|
+| `t` | `Literal["device.gone"]` | ✓ |
+| `local_id` | `str` | ✓ |
+
+### NodeWelcome
+
+gateway → node: ids the gateway gave the node's phones.
+
+| Alan | Tip | Zorunlu |
+|---|---|---|
+| `t` | `Literal["welcome"]` | ✓ |
+| `node_id` | `str` | ✓ |
+| `device_map` | `dict[str, Any]` |  |
+
+### NodeOpRequest
+
+gateway → node: run one op on one phone.
+
+| Alan | Tip | Zorunlu |
+|---|---|---|
+| `t` | `Literal["op.request"]` | ✓ |
+| `req` | `str` | ✓ |
+| `local_id` | `str` | ✓ |
+| `op` | `str` | ✓ |
+| `kw` | `dict[str, Any]` |  |
+| `deadline_ms` | `int` |  |
+
+### NodeOpResponse
+
+node → gateway: the op's outcome. Large images travel as data_b64 in the result (artifact store: A5.12).
+
+| Alan | Tip | Zorunlu |
+|---|---|---|
+| `t` | `Literal["op.response"]` | ✓ |
+| `req` | `str` | ✓ |
+| `ok` | `bool` | ✓ |
+| `result` | `Any` |  |
+| `error` | `ErrorInfo | None` |  |
+| `duration_ms` | `int` |  |

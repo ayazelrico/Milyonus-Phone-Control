@@ -73,9 +73,13 @@ def connect(uri: str | None = None) -> Backend:
     so one script can hold two devices side by side."""
     chosen, source = resolve_uri(uri)
     scheme, rest = split(chosen)
-    factories = schemes()
-    factory = factories.get(scheme)
+    factory = _registered.get(scheme)
     if factory is None:
+        # Load only the backend asked for: one broken or heavy backend must not stop the others.
+        found = [ep for ep in entry_points(group="mphone.backends") if ep.name == scheme]
+        factory = found[0].load() if found else None
+    if factory is None:
+        factories = {ep.name for ep in entry_points(group="mphone.backends")} | set(_registered)
         raise InvalidArgument(
             f"no backend for {scheme!r} (from {source}); installed: {', '.join(sorted(factories)) or 'none'}"
         )

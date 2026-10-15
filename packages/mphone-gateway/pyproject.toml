@@ -4,7 +4,21 @@ version = "0.1.0"
 description = "Control plane: API, auth, leases, policy, audit, routing."
 requires-python = ">=3.12"
 license = "Apache-2.0"
-dependencies = ["mphone-protocol"]
+dependencies = [
+    "mphone-protocol",
+    "mphone-core",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "aiosqlite>=0.20",
+    "pydantic-settings>=2.6",
+]
+
+[project.optional-dependencies]
+postgres = ["asyncpg>=0.30"]
+
+[project.scripts]
+mphone-gateway = "mphone_gateway.main:main"
 
 [build-system]
 requires = ["hatchling"]
