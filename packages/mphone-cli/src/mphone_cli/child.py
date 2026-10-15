@@ -38,8 +38,18 @@ def exit_code_for(error: MphoneError) -> int:
     return 1
 
 
+def _utf8_streams() -> None:
+    """The runner starts us with `python -I`, which ignores PYTHONIOENCODING: on Windows the streams
+    would be cp1252 and "Ayşe" would arrive as "AyÅŸe" (CI, windows-latest). Force UTF-8."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8", errors="replace")
+
+
 def main() -> int:
-    code = sys.stdin.read()
+    _utf8_streams()
+    code = sys.stdin.buffer.read().decode("utf-8")
     run_dir = Path(os.environ["MPHONE_RUN_DIR"])
     phone = helpers.connect(os.environ.get("MPHONE_DEVICE") or None)
     phone.backend.use(

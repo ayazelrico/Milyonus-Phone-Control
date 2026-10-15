@@ -58,6 +58,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):  # Windows consoles/pipes default to cp1252: Turkish needs UTF-8
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8", errors="replace")
     args = build_parser().parse_args(sys.argv[1:] if argv is None else argv)
     try:
         if args.command in (None, "version"):

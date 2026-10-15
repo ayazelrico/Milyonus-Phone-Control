@@ -23,6 +23,7 @@ def key_for(uri: str) -> str:
 
 
 def _try_lock(f: IO[str]) -> bool:
+    f.seek(0)  # lock the same byte on every handle (append mode starts at the end)
     if sys.platform.startswith("win"):
         import msvcrt
 
@@ -46,11 +47,14 @@ class LocalLease:
         self.owner = owner
         self.purpose = purpose
         self.path = config.subdir("locks") / f"{key_for(uri)}.lock"
+        # Who holds it lives in a separate, never-locked file: on Windows a locked byte range
+        # cannot be read from another handle (PermissionError when naming the holder).
+        self.info = self.path.with_suffix(".holder.json")
         self._file: IO[str] | None = None
 
     def holder(self) -> dict[str, Any] | None:
         try:
-            return json.loads(self.path.read_text(encoding="utf-8") or "null")
+            return json.loads(self.info.read_text(encoding="utf-8") or "null")
         except (OSError, ValueError):
             return None
 
@@ -65,27 +69,20 @@ class LocalLease:
                 user_action="Diğer görev bitene kadar bekleyin veya başka bir cihaz seçin.",
                 details={"holder": held},
             )
-        f.seek(0)
-        f.truncate()
-        f.write(
-            json.dumps(
-                {
-                    "owner": self.owner,
-                    "pid": os.getpid(),
-                    "purpose": self.purpose,
-                    "since": time.time(),
-                    "uri": self.uri,
-                }
-            )
-        )
-        f.flush()
+        holder = {
+            "owner": self.owner,
+            "pid": os.getpid(),
+            "purpose": self.purpose,
+            "since": time.time(),
+            "uri": self.uri,
+        }
+        self.info.write_text(json.dumps(holder), encoding="utf-8")
         self._file = f
         return self
 
     def release(self) -> None:
         if self._file is not None:
-            self._file.seek(0)
-            self._file.truncate()
+            self.info.unlink(missing_ok=True)
             self._file.close()  # closing drops the OS lock
             self._file = None
 
