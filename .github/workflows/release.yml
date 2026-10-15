@@ -1,0 +1,49 @@
+# Publish a release when a version tag is pushed (A3.11): `git tag v0.2.0 && git push origin v0.2.0`.
+# Assets: every package wheel, mphone-ime.apk (+ .sha256, which `mphone android ime install` verifies)
+# and SHA256SUMS. The APK is debug-signed until the release keystore exists (H-11).
+name: release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Tag matches package versions
+        run: |
+          uv run --no-project tools/bump_version.py --check
+          want="${GITHUB_REF_NAME#v}"
+          have=$(grep -m1 '^version = ' packages/mphone-cli/pyproject.toml | cut -d'"' -f2)
+          test "$want" = "$have" || { echo "tag $want != package version $have"; exit 1; }
+      - run: uv sync --frozen
+      - run: uv run pytest -q tests/unit tests/contract
+      - run: uv build --all-packages --wheel -o dist
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+      - name: Build the mphone IME
+        run: |
+          gradle -p apps/android-ime --no-daemon assembleDebug
+          cp apps/android-ime/app/build/outputs/apk/debug/app-debug.apk dist/mphone-ime.apk
+          (cd dist && sha256sum mphone-ime.apk > mphone-ime.apk.sha256)
+      - name: Checksums
+        run: cd dist && sha256sum *.whl mphone-ime.apk > SHA256SUMS
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "mphone $GITHUB_REF_NAME" \
+            --notes "Kurulum: \`uv tool install --find-links https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME mphone-cli mphone-mcp\` · Değişiklikler: CHANGELOG.md"
