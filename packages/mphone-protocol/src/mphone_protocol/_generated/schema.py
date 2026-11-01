@@ -891,6 +891,210 @@ SCHEMA: dict[str, Any] = json.loads(r'''{
     "id",
     "ok"
    ]
+  },
+  "NodeDevice": {
+   "description": "A phone as a node reports it. local_id is the node's own name for it (android:SERIAL).",
+   "type": "object",
+   "properties": {
+    "local_id": {
+     "type": "string"
+    },
+    "platform": {
+     "type": "string",
+     "enum": [
+      "android",
+      "ios",
+      "fake"
+     ]
+    },
+    "model": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "default": null
+    },
+    "os_version": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "default": null
+    },
+    "state": {
+     "$ref": "#/$defs/DeviceState"
+    },
+    "transport": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "default": null
+    },
+    "ops": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "default": []
+    }
+   },
+   "required": [
+    "local_id",
+    "platform",
+    "state"
+   ]
+  },
+  "NodeHello": {
+   "description": "node → gateway, first message after connecting.",
+   "type": "object",
+   "properties": {
+    "t": {
+     "const": "hello"
+    },
+    "version": {
+     "type": "string"
+    },
+    "protocol": {
+     "type": "string"
+    },
+    "devices": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/NodeDevice"
+     },
+     "default": []
+    }
+   },
+   "required": [
+    "t",
+    "version",
+    "protocol"
+   ]
+  },
+  "NodeDeviceUpdate": {
+   "description": "node → gateway: a phone appeared or changed state.",
+   "type": "object",
+   "properties": {
+    "t": {
+     "const": "device.update"
+    },
+    "device": {
+     "$ref": "#/$defs/NodeDevice"
+    }
+   },
+   "required": [
+    "t",
+    "device"
+   ]
+  },
+  "NodeDeviceGone": {
+   "description": "node → gateway: a phone disappeared.",
+   "type": "object",
+   "properties": {
+    "t": {
+     "const": "device.gone"
+    },
+    "local_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "t",
+    "local_id"
+   ]
+  },
+  "NodeWelcome": {
+   "description": "gateway → node: ids the gateway gave the node's phones.",
+   "type": "object",
+   "properties": {
+    "t": {
+     "const": "welcome"
+    },
+    "node_id": {
+     "type": "string"
+    },
+    "device_map": {
+     "type": "object",
+     "default": {}
+    }
+   },
+   "required": [
+    "t",
+    "node_id"
+   ]
+  },
+  "NodeOpRequest": {
+   "description": "gateway → node: run one op on one phone.",
+   "type": "object",
+   "properties": {
+    "t": {
+     "const": "op.request"
+    },
+    "req": {
+     "type": "string"
+    },
+    "local_id": {
+     "type": "string"
+    },
+    "op": {
+     "type": "string"
+    },
+    "kw": {
+     "type": "object",
+     "default": {}
+    },
+    "deadline_ms": {
+     "type": "integer",
+     "minimum": 1,
+     "default": 15000
+    }
+   },
+   "required": [
+    "t",
+    "req",
+    "local_id",
+    "op"
+   ]
+  },
+  "NodeOpResponse": {
+   "description": "node → gateway: the op's outcome. Large images travel as data_b64 in the result (artifact store: A5.12).",
+   "type": "object",
+   "properties": {
+    "t": {
+     "const": "op.response"
+    },
+    "req": {
+     "type": "string"
+    },
+    "ok": {
+     "type": "boolean"
+    },
+    "result": {
+     "default": null
+    },
+    "error": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/ErrorInfo"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "duration_ms": {
+     "type": "integer",
+     "minimum": 0,
+     "default": 0
+    }
+   },
+   "required": [
+    "t",
+    "req",
+    "ok"
+   ]
   }
  },
  "x-ops": {

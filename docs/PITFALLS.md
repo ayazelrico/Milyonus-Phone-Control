@@ -147,6 +147,20 @@
 - **Çözüm:** (1) Android: kaldırmadan önce aynı noktada iki durağan MOVE. (2) Platformdan bağımsız: `scroll_collect`, yeni ekranın öğeleri öncekiyle hiç örtüşmüyorsa yarım adım geri gidip örtüşen ekrandan devam eder — öğeler eksiksiz ve sıralı kalır. Sabit başlıklar örtüşme sayılmasın diye kontrol ekstraktörün öğeleri üzerinden yapılır.
 - **Test:** `test_helpers_fake.py::test_scroll_collect_recovers_rows_skipped_by_a_fling` (fake `overshoot`), E2E `test_scroll_collect_walks_200_rows_in_order`.
 
+## Windows
+
+### windows-isolated-python-encoding
+- **Belirti:** Windows'ta `mphone run` script'i `tap_text("Ayşe Yılmaz")` bulamıyor; audit'te "Android sÃ¼rÃ¼mÃ¼".
+- **Neden:** Runner alt süreci `python -I` ile başlatıyor; `-I` `PYTHONIOENCODING` dahil tüm `PYTHON*` değişkenlerini yok sayar → akışlar cp1252.
+- **Çözüm:** Alt süreç stdin'i bayt olarak okuyup UTF-8 çözer, stdout/stderr'i `reconfigure(encoding="utf-8")` eder; `mphone` CLI da öyle.
+- **Test:** CI `test (windows-latest)` — `tests/unit/cli/test_runner.py`.
+
+### windows-locked-range-unreadable
+- **Belirti:** İkinci agent kilit sahibini okurken `PermissionError [Errno 13]`.
+- **Neden:** `msvcrt.locking` ile kilitlenen bayt aralığı başka bir tutamaçtan okunamaz.
+- **Çözüm:** Sahip bilgisi kilitlenmeyen ayrı dosyada (`*.holder.json`); kilit her tutamaçta 0. bayttan.
+- **Test:** `tests/unit/cli/test_runner.py::test_local_lease_conflict_names_the_holder`.
+
 ## OCR
 
 ### ocr-comma-below

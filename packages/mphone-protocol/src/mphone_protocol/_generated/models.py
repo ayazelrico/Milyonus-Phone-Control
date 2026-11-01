@@ -236,6 +236,85 @@ class OpResult(BaseModel):
     artifacts: list[ArtifactRef] = Field(default_factory=list[ArtifactRef])
 
 
+class NodeDevice(BaseModel):
+    "A phone as a node reports it. local_id is the node's own name for it (android:SERIAL)."
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True, serialize_by_alias=True)
+
+    local_id: str
+    platform: Literal["android", "ios", "fake"]
+    model: str | None = Field(default=None)
+    os_version: str | None = Field(default=None)
+    state: DeviceState
+    transport: str | None = Field(default=None)
+    ops: list[str] = Field(default_factory=list[str])
+
+
+class NodeHello(BaseModel):
+    "node → gateway, first message after connecting."
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True, serialize_by_alias=True)
+
+    t: Literal["hello"]
+    version: str
+    protocol: str
+    devices: list[NodeDevice] = Field(default_factory=list[NodeDevice])
+
+
+class NodeDeviceUpdate(BaseModel):
+    "node → gateway: a phone appeared or changed state."
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True, serialize_by_alias=True)
+
+    t: Literal["device.update"]
+    device: NodeDevice
+
+
+class NodeDeviceGone(BaseModel):
+    "node → gateway: a phone disappeared."
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True, serialize_by_alias=True)
+
+    t: Literal["device.gone"]
+    local_id: str
+
+
+class NodeWelcome(BaseModel):
+    "gateway → node: ids the gateway gave the node's phones."
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True, serialize_by_alias=True)
+
+    t: Literal["welcome"]
+    node_id: str
+    device_map: dict[str, Any] = Field(default_factory=dict[str, Any])
+
+
+class NodeOpRequest(BaseModel):
+    "gateway → node: run one op on one phone."
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True, serialize_by_alias=True)
+
+    t: Literal["op.request"]
+    req: str
+    local_id: str
+    op: str
+    kw: dict[str, Any] = Field(default_factory=dict[str, Any])
+    deadline_ms: int = Field(default=15000, ge=1)
+
+
+class NodeOpResponse(BaseModel):
+    "node → gateway: the op's outcome. Large images travel as data_b64 in the result (artifact store: A5.12)."
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True, serialize_by_alias=True)
+
+    t: Literal["op.response"]
+    req: str
+    ok: bool
+    result: Any = Field(default=None)
+    error: ErrorInfo | None = Field(default=None)
+    duration_ms: int = Field(default=0, ge=0)
+
+
 # --- op arguments ------------------------------------------------------------
 
 
@@ -599,6 +678,13 @@ ArtifactRef.model_rebuild()
 TraceContext.model_rebuild()
 OpRequest.model_rebuild()
 OpResult.model_rebuild()
+NodeDevice.model_rebuild()
+NodeHello.model_rebuild()
+NodeDeviceUpdate.model_rebuild()
+NodeDeviceGone.model_rebuild()
+NodeWelcome.model_rebuild()
+NodeOpRequest.model_rebuild()
+NodeOpResponse.model_rebuild()
 ScreenCaptureArgs.model_rebuild()
 ScreenBoundsArgs.model_rebuild()
 ScreenTextArgs.model_rebuild()

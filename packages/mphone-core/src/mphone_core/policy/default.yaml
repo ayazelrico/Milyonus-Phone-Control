@@ -1,0 +1,75 @@
+# Default local policy (A3.04, Plan.md §10.3). Copy to <home>/policy.yaml to change it.
+# Decisions: allow | approve | deny. When several rules match, the strictest wins (deny > approve > allow).
+# Matching on screen text is a heuristic: an unlabeled icon can slip past it. It is a safety net
+# under the agent's own duty to ask (SKILL.md), never a replacement for it.
+version: 1
+defaults:
+  decision: allow
+
+categories:
+  messaging: [com.whatsapp, com.whatsapp.w4b, org.telegram.messenger, com.google.android.apps.messaging,
+              com.samsung.android.messaging, com.facebook.orca, com.viber.voip, com.discord, com.slack]
+  social: [com.instagram.android, com.twitter.android, com.zhiliaoapp.musically, com.facebook.katana,
+           com.linkedin.android, com.snapchat.android]
+  email: [com.google.android.gm, com.microsoft.office.outlook, com.samsung.android.email.provider]
+  # Package ids below are best-effort and must be verified on real devices (A2.17); extend freely.
+  banking: [com.garanti.cepsubesi, com.ykb.android, com.akbank.android.apps.akbank_direkt, tr.com.sekerbilisim.mbank,
+            com.ziraat.ziraatmobil, com.vakifbank.mobile, com.pozitron.iscep, com.teb, com.ingbanktr.ingmobil,
+            com.denizbank.mobildeniz, finansbank.enpara, com.qnbfinansbank.mobile, com.kuveytturk.mobil,
+            com.papara.app, com.paypal.android.p2pmobile]
+
+rules:
+  - id: never-type-into-password-fields
+    when: {op: input.text, target_field: {password: true}}
+    decision: deny
+    message: "Parola/PIN alanına yazmak yasak; request_human() ile kişiye devredin."
+
+  - id: secret-looking-text
+    when:
+      op: input.text
+      text_matches: ['^\s*\d{4,8}\s*$']
+      screen_contains_any: [doğrulama kodu, verification code, sms kodu, tek kullanımlık, one-time, pin, şifre, parola, password, passcode]
+    decision: deny
+    message: "Kod/PIN gibi görünen bir girdi; bunu kişi girmeli (request_human)."
+
+  - id: banking-apps
+    when: {app_in_category: banking}
+    decision: deny
+    message: "Bankacılık ve ödeme uygulamaları varsayılan olarak kapalı."
+
+  - id: outward-send
+    when:
+      op: [input.tap, input.press]
+      app_in_category: [messaging, social, email]
+      target_text_any: [Gönder, Send, Paylaş, Share, Yayınla, Post, Tweetle, Gönderi paylaş, Yanıtla, Reply]
+    decision: approve
+    message: "Mesaj/gönderi yayınlanacak."
+
+  - id: outward-send-enter
+    when: {op: input.keys, combo_in: [enter, return], app_in_category: [messaging, social]}
+    decision: approve
+    message: "Mesajlaşma uygulamasında Enter göndermek olabilir."
+
+  - id: payments
+    when:
+      op: [input.tap, input.press]
+      target_text_any: [Öde, Ödeme yap, Satın al, Satın Al, Pay, Buy, Buy now, Siparişi onayla, Siparişi tamamla, Ödemeyi tamamla, Abone ol, Subscribe]
+    decision: approve
+    message: "Para harcanacak."
+
+  - id: destructive
+    when:
+      op: [input.tap, input.press]
+      target_text_any: [Sil, Delete, Kaldır, Remove, Hesabı sil, Hesabı kapat, Sıfırla, Reset, Engelle, Block, Uninstall]
+    decision: approve
+    message: "Geri alınamaz bir işlem."
+
+  - id: settings-changes
+    when: {op: [input.tap, input.text, input.keys], app_in: [com.android.settings], mode: remote}
+    decision: approve
+    message: "Uzaktan ayar değişikliği."
+
+  - id: no-raw-remote
+    when: {op: raw, mode: remote}
+    decision: deny
+    message: "Uzak modda ham shell kapalı."

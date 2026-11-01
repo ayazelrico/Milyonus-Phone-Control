@@ -17,7 +17,7 @@ Bu dosya, bu depoda çalışan Claude Code oturumları (ve insan geliştiriciler
   | `docs/PITFALLS.md` | Bir backend'e (Android/iOS/Companion) dokunmadan önce **mutlaka**. |
   | `docs/adr/` | Bir teknoloji/kararı sorgulamadan önce. |
   | `docs/decisions.md` | Açık soruların (Q1–Q13) cevapları. |
-- **Mevcut faz:** `P1 tamamlandı → P2 — Android ADB` (P0'da insan bekleyen maddeler: H-01, H-02, H-03) (bu satırı faz değiştikçe güncelle).
+- **Mevcut faz:** P2 tamam (PR #2). P3 kod tamam + P5 ilk kısım (PR #3: gateway, node, gw://, MCP uzak modu). Bekleyen insan işleri: gerçek telefon (A2.17), Claude API anahtarı (A3.10), Docker (A5.17 runner sandbox).
 
 ---
 
@@ -84,14 +84,19 @@ uv run pytest --cov=packages/mphone-core/src --cov=packages/mphone-protocol/src 
 uv run pytest -m ocr                      # [A2.06] OCR korpus kalite testi
 uv run pytest tests/e2e_emulator          # [A2.15] açık bir Android emülatörü/cihazı gerekir
 uv run mphone doctor android              # [A2.13] bağlı Android zincir teşhisi
-uv run mphone run <<'PY'                  # [A3.01]
+uv run mphone run <<'PY'                  # helper'lar yüklü; --device, --allow KURAL
 ensure_device(); print(screen_text()[:20])
 PY
 uv run pytest tests/e2e_fake              # [A5.22] gateway/runner/mcp zinciri (Docker gerekir)
 docker compose -f deploy/docker-compose.yml up -d   # [A5.20] yerel gateway yığını
 ```
 
-Bu makinede (geliştirme Mac'i) `adb` ve `docker` henüz kurulu değil: P2 için `brew install android-platform-tools`, P5 için Docker Desktop veya OrbStack gerekir.
+Bu makinede `adb` kurulu; `docker` yok (P5 için Docker Desktop/OrbStack gerekir). Emülatör yalnızca CI'da (disk/RAM kısıtı, docs/decisions.md Q13).
+
+```bash
+uv run mphone-mcp                          # MCP sunucusu (stdio)
+uv run python -m tests.agent_eval.harness --agent scripted   # eval düzeneği (ücretsiz); --agent claude API ücreti doğurur
+```
 
 Pytest işaretleri: `slow`, `ocr`, `device` (gerçek cihaz ister — CI'da atlanır), `emulator`, `macos` (pyobjc ister), `docker`.
 
