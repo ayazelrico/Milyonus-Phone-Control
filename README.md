@@ -1,3 +1,15 @@
+<div align="center">
+
+<img src="docs/assets/milyonus-wordmark-lg.png" alt="Milyonus" width="640" />
+
+**Phone-control infrastructure for the Milyonus agent.**
+
+[Website](https://www.milyonus.com) · [Repository](https://github.com/ayazelrico/Milyonus-Phone-Control)
+
+</div>
+
+---
+
 # Milyonus Phone Control (mphone)
 
 Milyonus Agent'ın gerçek telefonları **bağlı (yerel)** ve **uzaktan** kontrol etmesini sağlayan sistem: Android (adb, Companion App), iPhone (iPhone Mirroring, WebDriverAgent), Gateway (kiralama, politika, onay, audit) ve MCP sunucusu.
